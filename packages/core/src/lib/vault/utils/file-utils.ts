@@ -142,6 +142,9 @@ const ALLOWED_EXTENSIONS = new Set([
   '.idw',
   '.3dm',
   '.ply',
+  // FreeCAD
+  '.fcstd',
+  '.fcstd1',
   // Solid Edge
   '.par',
   '.psm',
@@ -262,6 +265,8 @@ export function isCADFile(filename: string): boolean {
     '.f3z', // Fusion 360 archive
     '.3dm', // Rhino 3D
     '.ply', // Polygon File Format
+    '.fcstd', // FreeCAD document
+    '.fcstd1', // FreeCAD document (backup generation)
     '.glb', // glTF Binary
     '.gltf', // glTF
   ]
@@ -324,6 +329,8 @@ export function detectFileCategory(
   const cadModelExtensions = [
     '.stl',
     '.obj',
+    '.fcstd',
+    '.fcstd1',
     '.step',
     '.stp',
     '.iges',
@@ -403,6 +410,8 @@ export function getCADFormat(filename: string): string | null {
     '.stp': 'STEP',
     '.iges': 'IGES',
     '.igs': 'IGES',
+    '.fcstd': 'FreeCAD',
+    '.fcstd1': 'FreeCAD',
     '.sldprt': 'SolidWorks',
     '.sldasm': 'SolidWorks',
     '.slddrw': 'SolidWorks',
