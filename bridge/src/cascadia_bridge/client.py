@@ -187,17 +187,46 @@ class CascadiaClient:
         return data.get("file", data)
 
     def latest_version(self, file_id: str) -> VaultFile:
-        """Resolve any version id to the current head of its lineage.
+        """Resolve a version id to the current head of *its own* lineage.
 
-        Checking out a superseded version would silently branch the file, so
-        every path into the vault goes through here first.
+        Two Cascadia behaviours make this less obvious than it sounds, and
+        getting it wrong means silently working on someone else's file:
+
+        - ``/files/:id/versions`` is not scoped to the lineage. It returns every
+          file row on the item, spanning unrelated filenames, so the rows have
+          to be filtered by name before any of them mean anything.
+        - Uploading a file whose name already exists on the item starts a
+          *parallel* lineage rather than adding a version, so several rows can
+          carry ``isLatestVersion: true`` for the same name at once.
+
+        The conservative reading: a row that is already its own head is the
+        answer, and the chain is only walked when the caller holds a superseded
+        id. Never cross from one lineage to another that merely shares a name.
         """
-        for entry in self.versions(file_id):
-            if entry.get("isLatestVersion"):
-                head = VaultFile.from_api(entry)
-                # /versions is a summary view; the full record carries itemId.
-                return VaultFile.from_api({**self.metadata(head.file_id), **entry})
-        return VaultFile.from_api(self.metadata(file_id))
+        record = self.metadata(file_id)
+        this = VaultFile.from_api(record)
+        if this.is_latest:
+            return this
+
+        siblings = [
+            entry
+            for entry in self.versions(file_id)
+            if entry.get("fileName") == record.get("fileName")
+        ]
+        heads = [entry for entry in siblings if entry.get("isLatestVersion")]
+        if len(heads) != 1:
+            # Zero: nothing claims to be current. More than one: the name has
+            # forked and "the latest version" has no single answer. Either way,
+            # guessing would put work on the wrong file.
+            raise CascadiaError(
+                409,
+                "AMBIGUOUS_FILE_HEAD",
+                f"{len(heads)} rows claim to be the latest version of "
+                f"{record.get('fileName')!r} on this item; resolve by file id instead",
+            )
+        # /versions is a summary view; the full record carries itemId.
+        head = VaultFile.from_api(heads[0])
+        return VaultFile.from_api({**self.metadata(head.file_id), **heads[0]})
 
     def lock_status(self, file_id: str) -> dict[str, Any]:
         return self._request("GET", f"/files/{file_id}/lock-status")

@@ -7,6 +7,8 @@ dependencies = []
 
 [project.scripts]
 cascadia-bridge = "cascadia_bridge.cli:main"
+fcstd-scan = "cascadia_bridge.fcstd_scan:main"
+cascadia-preflight = "cascadia_bridge.preflight:main"
 
 [build-system]
 requires = ["hatchling"]

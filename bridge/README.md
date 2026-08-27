@@ -34,9 +34,48 @@ the vault file id, item id, version, SHA-256 at checkout, and the ECO and job
 ids. `checkin` reads it back, compares digests, and mints a new version only if
 the bytes actually changed.
 
+## Before you build on any of this
+
+Two preflight questions decide whether the integration is viable at all.
+
+**Will the agent accept your models?** It refuses scripted FreeCAD documents —
+`App::FeaturePython`, Python proxies, Python-object properties — before FreeCAD
+opens the archive. Assembly4, the fasteners workbench and most parametric addons
+persist exactly those types, so a library built with them is rejected wholesale.
+This is not configurable: the check _is_ the agent's trust boundary.
+
+```bash
+fcstd-scan /path/to/model/library --agent-src /path/to/agent/src
+# Scanned 214 models — 176 accepted, 38 refused (82.2% usable)
+```
+
+The scanner imports the agent's own `fcstd_security` module and calls the same
+function the agent calls, so its verdict is the real one rather than an
+approximation. Without an agent checkout it falls back to a cruder check and
+says so; `--require-agent` refuses to guess. Run this before anything else — a
+low acceptance rate changes the project.
+
+**Is the environment the one the agent certified?**
+
+```bash
+cascadia-preflight freecad /path/to/FreeCADCmd --expect-sha256 <digest>
+cascadia-preflight contract /path/to/agent/src --snapshot bridge/agent-tool-contract.json
+```
+
+The first checks the binary against version 1.1.3 and its reviewed digest — the
+agent blocks anything else outright. The second diffs the agent's 78 MCP tools
+against the recorded snapshot, so an upstream rename fails a check instead of
+failing a design session. New tools are fine; a removed one is not.
+
+To vendor the third-party FreeCAD GUI MCP at the commit the agent audited:
+
+```bash
+./scripts/vendor-freecad-mcp.sh ../freecad-mcp [your-fork-url]
+```
+
 ## What it guarantees
 
-- **Head resolution.** A Cascadia file id names *one version*, not the lineage.
+- **Head resolution.** A Cascadia file id names _one version_, not the lineage.
   Checkout resolves to the current head first, so work never starts from a
   superseded revision.
 - **Lock discipline.** The vault lock is taken before the download and released
@@ -57,17 +96,24 @@ exist without a real vault.
 CASCADIA_API_KEY=csc_... CASCADIA_ITEM_ID=<uuid> python bridge/tests/test_roundtrip.py
 ```
 
-22 checks, covering upload, checkout, double-checkout rejection, no-op check-in,
-edited check-in, head advance, lock release, and the sidecar guard rails.
+```bash
+python bridge/tests/test_fcstd_scan.py --agent-src /path/to/agent/src
+python bridge/tests/test_preflight.py  --agent-src /path/to/agent/src
+```
+
+53 checks in total: 22 over the file lifecycle (upload, checkout,
+double-checkout rejection, no-op check-in, edited check-in, head advance, lock
+release, sidecar guard rails), 14 over the scanner against synthesised FCStd
+archives, and 17 over the preflight gates — including the negative cases, since
+a check that cannot fail is not a check.
 
 ## Two things to know
 
-**FCStd support is a patch to Cascadia.** The vault's allowed-extension list is
-a hardcoded constant that covers SolidWorks, CATIA, Inventor, Solid Edge, Fusion
-and Rhino but omitted FreeCAD's own format, so uploads were rejected with
-`FILE_TYPE_NOT_ALLOWED`. `packages/core/src/lib/vault/utils/file-utils.ts` now
-lists `.fcstd`/`.fcstd1` in four places (allowlist, `isCADFile`, category
-inference, format display name). Worth sending upstream.
+**Cascadia needed patching, and it is documented.** FreeCAD files were rejected
+by the vault's upload allowlist; that is fixed in this tree. Two further
+findings are reported but untouched. See
+[CASCADIA-PATCHES.md](./CASCADIA-PATCHES.md), written to be handed to the
+Cascadia maintainers as-is.
 
 **This directory's licence is undecided.** `npm run license:check` flags these
 files because Cascadia's edition manifest treats everything in this tree as

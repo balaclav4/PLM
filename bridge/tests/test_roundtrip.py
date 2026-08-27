@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -47,7 +48,10 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        original = root / "bracket.FCStd"
+        # A unique name per run: uploading an existing name to the same item
+        # starts a parallel lineage rather than a new version, which would make
+        # "the latest version" ambiguous for every later assertion.
+        original = root / f"bracket-{uuid.uuid4().hex[:8]}.FCStd"
         original.write_bytes(b"PK\x03\x04FCStd-v1-original-geometry" + b"\x00" * 256)
         original_digest = sha256_of(original)
 

@@ -2,6 +2,8 @@
 
 from .bridge import Binding, BridgeError, CheckinResult, CheckoutResult, checkin, checkout
 from .client import CascadiaClient, CascadiaError, VaultFile, sha256_of
+from .fcstd_scan import FileVerdict, ScanReport, scan
+from .preflight import ContractDiff, FreeCADCheck, diff_surface, tool_surface, verify_freecad
 
 __all__ = [
     "Binding",
@@ -10,8 +12,16 @@ __all__ = [
     "CascadiaError",
     "CheckinResult",
     "CheckoutResult",
+    "ContractDiff",
+    "FileVerdict",
+    "FreeCADCheck",
+    "ScanReport",
     "VaultFile",
     "checkin",
     "checkout",
+    "diff_surface",
+    "scan",
     "sha256_of",
+    "tool_surface",
+    "verify_freecad",
 ]
