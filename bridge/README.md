@@ -73,6 +73,36 @@ To vendor the third-party FreeCAD GUI MCP at the commit the agent audited:
 ./scripts/vendor-freecad-mcp.sh ../freecad-mcp [your-fork-url]
 ```
 
+## Cascadia inside the FreeCAD window
+
+`freecad/CascadiaPanel.py` puts Cascadia's UI in a dock panel beside the 3D view
+(or an MDI tab), so the part, its BOM and its change order are on one screen
+instead of behind an alt-tab.
+
+```python
+import CascadiaPanel
+CascadiaPanel.show()                    # dock panel, remembers where you put it
+CascadiaPanel.show(as_tab=True)         # MDI tab next to the 3D view
+CascadiaPanel.show_part(part_id)        # deep-link
+CascadiaPanel.show_working_copy(workdir)  # follow a bridge checkout to its record
+```
+
+Two things worth knowing before you rely on it:
+
+- **The Web workbench no longer exists.** `WebGui` was removed from FreeCAD; only
+  a headless `Mod/Web/App` remains. The current way to host HTML in the window is
+  a `QWebEngineView` placed in a `QDockWidget` or the MDI area, which is what
+  FreeCAD's own Help module does in 1.1.3. This panel follows that pattern.
+- **QtWebEngine is optional in FreeCAD builds.** FreeCAD's Help module carries a
+  fallback for exactly this case, so the panel probes the same way and opens the
+  system browser instead of failing. If your build lacks it, embedding is not
+  available at all — check with `CascadiaPanel.webengine_available()` before
+  planning around it.
+
+The panel uses a persistent web profile under FreeCAD's user data directory, so
+the Cascadia session survives restarts. Without that, an embedded panel means
+logging in on every launch, which is worse than the second window.
+
 ## What it guarantees
 
 - **Head resolution.** A Cascadia file id names _one version_, not the lineage.
@@ -101,11 +131,17 @@ python bridge/tests/test_fcstd_scan.py --agent-src /path/to/agent/src
 python bridge/tests/test_preflight.py  --agent-src /path/to/agent/src
 ```
 
-53 checks in total: 22 over the file lifecycle (upload, checkout,
+65 checks in total: 22 over the file lifecycle (upload, checkout,
 double-checkout rejection, no-op check-in, edited check-in, head advance, lock
 release, sidecar guard rails), 14 over the scanner against synthesised FCStd
-archives, and 17 over the preflight gates — including the negative cases, since
-a check that cannot fail is not a check.
+archives, 17 over the preflight gates, and 12 over the panel's URL and route
+resolution — including the negative cases, since a check that cannot fail is not
+a check. The panel's Qt half needs a running FreeCAD and is exercised by hand;
+what is tested here is where it points, which is where a silent 404 comes from.
+
+```bash
+python bridge/tests/test_panel.py      # no FreeCAD required
+```
 
 ## Two things to know
 
