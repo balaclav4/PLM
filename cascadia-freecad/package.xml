@@ -12,9 +12,15 @@
   <license>UNLICENSED</license>
   <url type="repository" branch="main">https://github.com/balaclav4/FreeCAD-Cascadia-Addon</url>
 
-  <!-- FreeCAD 1.1.3 is the build the mechanical design agent certifies, and
-       the panel's QWebEngineView placement was verified against that tag. -->
-  <freecadmin>1.1.3</freecadmin>
+  <!-- This addon needs a docked QWebEngineView and the standard workbench and
+       command APIs, all of which are 1.0-era. The panel's placement was read
+       from the 1.1.3 source, but nothing here depends on 1.1.x.
+
+       Do not raise this to 1.1.3 to match the mechanical design agent: that is
+       a separate, external component with its own certified FreeCAD build, and
+       pinning the addon to it only stops the addon installing on FreeCADs it
+       would run on perfectly well. -->
+  <freecadmin>1.0</freecadmin>
 
   <content>
     <workbench>

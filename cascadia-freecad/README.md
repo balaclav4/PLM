@@ -197,8 +197,33 @@ subdirectory of a monorepo.
    - **Branch:** `main`
 4. Close preferences, refresh the addon list, install **Cascadia PLM**, restart.
 
+Requires FreeCAD 1.0 or newer. (The mechanical design agent separately certifies
+exactly 1.1.3, but that is an external component — this addon does not need it.)
+
 Updates then come from Addon Manager's own update button. `install.py` remains
-for offline machines or when you want a symlink to a working checkout.
+for offline machines, symlinked working checkouts, and the case below.
+
+### If Addon Manager crashes on startup
+
+Some FreeCAD builds ship an Addon Manager with this bug:
+
+```
+addonmanager_workers_startup.py, in run
+    details += f"{addon.display_name} is missing addons {', '.join(deps.external_addons)}\n"
+TypeError: sequence item 0: expected str instance, Addon found
+```
+
+It joins `Addon` objects as if they were strings. Upstream fixed it — current
+Addon Manager reads `', '.join([x.display_name for x in deps.external_addons])`
+— so a newer FreeCAD resolves it.
+
+It is not caused by this addon: that list is populated only from `<depend>`
+elements in a `package.xml`, and this one declares none. It fires when any
+_already installed_ addon has an unmet dependency, and it crashes the manager
+before it can show you anything.
+
+Until FreeCAD is updated, install with `python install.py`, which does the same
+job without going through Addon Manager.
 
 The URL and branch above are also recorded in `package.xml`; Addon Manager warns
 if they disagree with where it actually fetched from, so change both together.
