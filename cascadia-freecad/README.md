@@ -184,17 +184,29 @@ Deliberately not included:
   conversationally today. Adding commands later is additive — same package, same
   bridge.
 
-## Repository note
+## Installing through FreeCAD's Addon Manager
 
-This currently lives inside the Cascadia tree, whose edition manifest declares
-every file AGPL-3.0-or-later, so `npm run license:check` flags it. It shares no
-code with Cascadia and talks to it over HTTP, so it can be split out whenever
-you want it under its own licence:
+This repository's root is the addon, which is what lets FreeCAD install it
+directly — Addon Manager clones a repository root, so it cannot install a
+subdirectory of a monorepo.
 
-```bash
-git subtree split --prefix=cascadia-freecad -b addon-only
-# then push that branch to a new repository
-```
+1. **Tools → Addon manager**
+2. The gear icon (⚙) → **Custom repositories**
+3. Add:
+   - **Repository URL:** `https://github.com/balaclav4/FreeCAD-Cascadia-Addon`
+   - **Branch:** `main`
+4. Close preferences, refresh the addon list, install **Cascadia PLM**, restart.
 
-Splitting is also what makes `git pull` updates and Addon Manager installs work,
-since both operate on a repository root.
+Updates then come from Addon Manager's own update button. `install.py` remains
+for offline machines or when you want a symlink to a working checkout.
+
+The URL and branch above are also recorded in `package.xml`; Addon Manager warns
+if they disagree with where it actually fetched from, so change both together.
+
+## Licence
+
+Declared `UNLICENSED` in `package.xml` and no LICENSE file is present, which
+means all rights reserved by default. That is a placeholder, not a decision.
+
+This code shares nothing with Cascadia and talks to it over HTTP, so Cascadia's
+AGPL does not reach it — MIT, Apache-2.0 or proprietary are all open choices.

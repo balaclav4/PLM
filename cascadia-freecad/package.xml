@@ -9,8 +9,8 @@
   <version>0.1.0</version>
   <date>2026-08-27</date>
   <maintainer email="maxwell.simons@protonmail.com">Cascadia FreeCAD integration</maintainer>
-  <license file="LICENSE">UNLICENSED</license>
-  <url type="repository" branch="addon">https://github.com/balaclav4/PLM</url>
+  <license>UNLICENSED</license>
+  <url type="repository" branch="main">https://github.com/balaclav4/FreeCAD-Cascadia-Addon</url>
 
   <!-- FreeCAD 1.1.3 is the build the mechanical design agent certifies, and
        the panel's QWebEngineView placement was verified against that tag. -->
