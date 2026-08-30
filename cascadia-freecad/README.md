@@ -15,27 +15,27 @@ index, and nothing phones home.
 ```
 
 The script asks FreeCAD where its user directory is rather than guessing per
-platform. If FreeCAD is not on your PATH, get the path from its Python console
-and pass it in:
-
-```python
-import FreeCAD; FreeCAD.getUserAppDataDir()
-```
+platform. If FreeCAD is not on your PATH, the script says so and you can pass
+the location in directly:
 
 ```bash
-FREECAD_USER_DIR=/that/path ./install-local.sh
+FREECAD_USER_DIR=/path/to/FreeCAD/user/dir ./install-local.sh
 ```
 
-Restart FreeCAD, pick **Cascadia PLM** from the workbench selector, click the
-toolbar button. The panel is a dock widget, so it stays put when you switch back
-to Part Design.
+On most systems that is `~/.local/share/FreeCAD` (Linux),
+`~/Library/Application Support/FreeCAD` (macOS) or `%APPDATA%\FreeCAD`
+(Windows) — but the script prefers to ask FreeCAD rather than assume.
 
-Point it at your instance with `CASCADIA_URL`, or from FreeCAD:
+Restart FreeCAD and pick **Cascadia PLM** from the workbench selector. There are
+two buttons:
 
-```python
-from cascadia_bridge import panel
-panel.set_base_url("http://your-host:3000")
-```
+- **Cascadia PLM status** — reports whether this build can dock the panel and
+  where the panel points. Click this first; it needs no Python console.
+- **Cascadia PLM panel** — opens the dock. It stays put when you switch back to
+  Part Design.
+
+Point it at your instance by setting `CASCADIA_URL` before launching FreeCAD.
+The status button shows which URL is in effect and where that value came from.
 
 ### Why an addon rather than a macro
 
@@ -127,11 +127,9 @@ To vendor the third-party FreeCAD GUI MCP at the commit the agent audited:
 - **QtWebEngine is optional in FreeCAD builds.** FreeCAD's Help module carries a
   fallback for exactly this, so the panel probes the same way and opens the
   system browser rather than failing. If your build lacks it, embedding is not
-  possible at all:
-
-  ```python
-  from cascadia_bridge import panel; panel.webengine_available()
-  ```
+  possible at all — the **Cascadia PLM status** button reports that directly,
+  and the panel raises a dialog rather than only logging to the Report view,
+  which is hidden by default too.
 
 The panel keeps a persistent web profile under FreeCAD's user data directory, so
 the Cascadia session survives restarts. Without that, an embedded panel means
@@ -147,8 +145,8 @@ python tests/test_preflight.py  --agent-src <agent/src>
 CASCADIA_API_KEY=csc_... CASCADIA_ITEM_ID=<uuid> python tests/test_roundtrip.py
 ```
 
-65 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
-FCStd archives, 17 over the preflight gates, 12 over the panel's URL and route
+76 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
+FCStd archives, 17 over the preflight gates, 23 over the panel's URL, route and status
 resolution — negative cases included, since a check that cannot fail is not a
 check. The panel's Qt half needs a running FreeCAD and is exercised by hand;
 what is tested here is where it points, which is where a silent 404 comes from.

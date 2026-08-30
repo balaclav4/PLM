@@ -75,14 +75,13 @@ cat <<EOF
 
 Installed. Next:
   1. Restart FreeCAD.
-  2. Pick "Cascadia PLM" from the workbench selector, then the toolbar button.
+  2. Pick "Cascadia PLM" from the workbench selector.
+  3. Click "Cascadia PLM status" first — it reports whether this build can dock
+     the panel, and where the panel points. No Python console needed.
+  4. Then the panel button.
 
-If the panel opens a separate browser window instead of docking, this FreeCAD
-build has no QtWebEngine. Check it directly:
+Point the panel at your instance by setting CASCADIA_URL before launching
+FreeCAD, e.g.
 
-  from cascadia_bridge import panel; panel.webengine_available()
-
-Point the panel at your instance with CASCADIA_URL, or from FreeCAD:
-
-  from cascadia_bridge import panel; panel.set_base_url("http://your-host:3000")
+  CASCADIA_URL=http://your-host:3000
 EOF

@@ -69,6 +69,20 @@ def main() -> int:
     except ValueError:
         check("an unknown item type is rejected", True)
 
+    print("\nstatus report (replaces needing a Python console)")
+    data = panel.status()
+    for key in ("webengine", "embedding", "base_url", "url_source", "in_freecad", "python"):
+        check(f"status reports {key}", key in data)
+    check("status knows FreeCAD is absent here", data["in_freecad"] is False)
+    check("status agrees with the probe", data["webengine"] == panel.webengine_available())
+    text = panel.status_text()
+    check("status_text renders every line", text.count("\n") >= 5, repr(text[:60]))
+    check("status_text names the URL", panel.base_url() in text)
+
+    os.environ["CASCADIA_URL"] = "http://from-env:3000"
+    check("status attributes an env URL", "environment" in panel.status()["url_source"])
+    os.environ.pop("CASCADIA_URL", None)
+
     print("\nworking-copy deep link")
     with tempfile.TemporaryDirectory() as tmp:
         workdir = Path(tmp)

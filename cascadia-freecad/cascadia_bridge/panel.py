@@ -148,6 +148,45 @@ def _build_view(url: str):
     return view
 
 
+def status() -> dict:
+    """Everything needed to answer "will this work here?" without a console.
+
+    Returned as plain data so the same answer can be shown in a dialog, printed
+    by the CLI, or asserted in a test.
+    """
+    import platform
+
+    ready = webengine_available()
+    return {
+        "webengine": ready,
+        "embedding": "available" if ready else "unavailable — panel opens in the system browser",
+        "base_url": base_url(),
+        "url_source": (
+            "CASCADIA_URL environment variable"
+            if os.environ.get("CASCADIA_URL")
+            else ("FreeCAD preferences" if FreeCAD is not None else "built-in default")
+        ),
+        "profile_dir": _profile_directory() if FreeCAD is not None else "(needs FreeCAD)",
+        "in_freecad": FreeCAD is not None,
+        "python": platform.python_version(),
+    }
+
+
+def status_text() -> str:
+    """The same report as human-readable lines."""
+    data = status()
+    return "\n".join(
+        [
+            f"Embedded panel:  {data['embedding']}",
+            f"QtWebEngine:     {'yes' if data['webengine'] else 'no'}",
+            f"Cascadia URL:    {data['base_url']}",
+            f"  from:          {data['url_source']}",
+            f"Web profile:     {data['profile_dir']}",
+            f"Python:          {data['python']}",
+        ]
+    )
+
+
 def _dock_area(value: int):
     from PySide import QtCore
 
@@ -175,6 +214,17 @@ def show(url: str | None = None, as_tab: bool = False):
 
     if not webengine_available():
         _warn(_MISSING_WEBENGINE)
+        # The Report view is hidden by default too, so a log line can go unseen
+        # and the engineer is left wondering why a browser opened.
+        if FreeCADGui is not None:
+            try:
+                from PySide import QtWidgets
+
+                QtWidgets.QMessageBox.warning(
+                    FreeCADGui.getMainWindow(), "Cascadia PLM", _MISSING_WEBENGINE
+                )
+            except Exception:
+                pass
         import webbrowser
 
         webbrowser.open(target)
