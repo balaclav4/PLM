@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<package format="1">
+  <name>Cascadia PLM</name>
+  <description>
+    Cascadia PLM inside FreeCAD: the PLM web UI in a dock panel beside the 3D
+    view, and an FCStd round-trip between Cascadia's file vault and a design-job
+    working copy.
+  </description>
+  <version>0.1.0</version>
+  <date>2026-08-27</date>
+  <maintainer email="maxwell.simons@protonmail.com">Cascadia FreeCAD integration</maintainer>
+  <license file="LICENSE">UNLICENSED</license>
+  <url type="repository" branch="main">https://github.com/balaclav4/PLM</url>
+
+  <!-- FreeCAD 1.1.3 is the build the mechanical design agent certifies, and
+       the panel's QWebEngineView placement was verified against that tag. -->
+  <freecadmin>1.1.3</freecadmin>
+
+  <content>
+    <workbench>
+      <classname>CascadiaWorkbench</classname>
+      <name>Cascadia PLM</name>
+      <description>
+        Dock the Cascadia PLM interface next to the model, and move FCStd files
+        between the vault and a design-job working copy.
+      </description>
+      <tag>PLM</tag>
+      <tag>Cascadia</tag>
+      <tag>PDM</tag>
+    </workbench>
+  </content>
+</package>

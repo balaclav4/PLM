@@ -234,7 +234,7 @@ npm run dev
 # create an API key: Settings → API Keys, or POST /api/v1/auth/api-keys
 
 CASCADIA_API_KEY=csc_... CASCADIA_ITEM_ID=<uuid> \
-  python bridge/tests/test_roundtrip.py     # 22 checks over the file lifecycle
+  python cascadia-freecad/tests/test_roundtrip.py     # 22 checks over the file lifecycle
 ```
 
 The round-trip test is what surfaced findings 1 and 2 — both were invisible

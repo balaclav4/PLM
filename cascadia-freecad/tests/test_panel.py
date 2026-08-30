@@ -16,9 +16,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "freecad"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import CascadiaPanel as panel  # noqa: E402
+from cascadia_bridge import panel  # noqa: E402
 
 PASSED: list[str] = []
 FAILED: list[str] = []

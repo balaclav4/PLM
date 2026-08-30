@@ -15,7 +15,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from cascadia_bridge.preflight import (  # noqa: E402
     CERTIFIED_FREECAD_VERSION,

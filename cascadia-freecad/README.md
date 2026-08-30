@@ -1,0 +1,182 @@
+# Cascadia PLM for FreeCAD
+
+A FreeCAD addon that puts Cascadia's PLM interface in a dock panel beside the 3D
+view, and moves FCStd files between Cascadia's file vault and a design-job
+working copy without losing track of which vault version the work descends from.
+
+Installed locally from a git clone. Nothing here talks to the FreeCAD addon
+index, and nothing phones home.
+
+## Install
+
+```bash
+./install-local.sh          # symlink — edits take effect on restart
+./install-local.sh --copy   # copy instead
+```
+
+The script asks FreeCAD where its user directory is rather than guessing per
+platform. If FreeCAD is not on your PATH, get the path from its Python console
+and pass it in:
+
+```python
+import FreeCAD; FreeCAD.getUserAppDataDir()
+```
+
+```bash
+FREECAD_USER_DIR=/that/path ./install-local.sh
+```
+
+Restart FreeCAD, pick **Cascadia PLM** from the workbench selector, click the
+toolbar button. The panel is a dock widget, so it stays put when you switch back
+to Part Design.
+
+Point it at your instance with `CASCADIA_URL`, or from FreeCAD:
+
+```python
+from cascadia_bridge import panel
+panel.set_base_url("http://your-host:3000")
+```
+
+### Why an addon rather than a macro
+
+FreeCAD loads every directory under `Mod/` at startup and puts it on `sys.path`
+(`FreeCADInit.py`, `sys.path.insert(0, Dir)`). That is what makes
+`import cascadia_bridge` work inside FreeCAD with no path juggling, while the
+same package stays pip-installable for the coding agent and CI:
+
+```bash
+pip install -e .        # headless: bridge, scanner, preflight
+```
+
+One checkout, two audiences.
+
+## Headless use
+
+The bridge, scanner and preflight checks have no FreeCAD dependency and no
+third-party dependencies at all — which is also why the addon needs no `pip`
+step inside FreeCAD's bundled Python, where installing is often impossible.
+
+```bash
+export CASCADIA_URL=http://localhost:3000
+export CASCADIA_API_KEY=csc_...        # Cascadia → Settings → API Keys
+
+cascadia-bridge checkout <file-id> --into ./job-workspace --eco <eco-id>
+cascadia-bridge status  --from ./job-workspace
+cascadia-bridge checkin --from ./job-workspace --message "fillet added"
+```
+
+`checkout` writes a `.cascadia-bridge.json` sidecar recording the vault file id,
+item id, version, SHA-256 at checkout, and the ECO and job ids. `checkin` reads
+it back, compares digests, and mints a new version only if the bytes changed.
+
+### What the round-trip guarantees
+
+- **Head resolution.** A Cascadia file id names _one version_, not the lineage.
+  Checkout resolves to the current head, so work never starts from a superseded
+  revision.
+- **Lock discipline.** The vault lock is taken before the download and released
+  if anything afterwards fails — a stranded lock needs an administrator.
+- **Integrity on the way out.** Downloaded bytes are checked against Cascadia's
+  own recorded `fileHash` before work starts.
+- **No accidental revisions.** An unedited working copy releases the lock
+  without minting a version. `--require-changes` makes that an error instead.
+- **New head reported.** Check-in returns `head_file_id`, which differs from the
+  id checked out.
+
+## Before building on any of this
+
+**Will the design agent accept your models?** It refuses scripted FreeCAD
+documents — `App::FeaturePython`, Python proxies, Python-object properties —
+before FreeCAD opens the archive. Assembly4, the fasteners workbench and most
+parametric addons persist exactly those types. This is not configurable: the
+check _is_ the agent's trust boundary.
+
+```bash
+fcstd-scan /path/to/model/library --agent-src /path/to/agent/src
+# Scanned 214 models — 176 accepted, 38 refused (82.2% usable)
+```
+
+The scanner imports the agent's own `fcstd_security` module and calls the same
+function the agent calls, so the verdict is the real one. Without an agent
+checkout it falls back to a cruder check and says so; `--require-agent` refuses
+to guess. Run this first — a low acceptance rate changes the project.
+
+**Is the environment the one the agent certified?**
+
+```bash
+cascadia-preflight freecad /path/to/FreeCADCmd --expect-sha256 <digest>
+cascadia-preflight contract /path/to/agent/src --snapshot agent-tool-contract.json
+```
+
+The agent certifies FreeCAD 1.1.3 by digest and blocks anything else outright.
+The contract check diffs the agent's 78 MCP tools against the recorded snapshot,
+so an upstream rename fails a check instead of a design session.
+
+To vendor the third-party FreeCAD GUI MCP at the commit the agent audited:
+
+```bash
+./scripts/vendor-freecad-mcp.sh ../freecad-mcp [your-fork-url]
+```
+
+## Two FreeCAD facts worth knowing
+
+- **The Web workbench no longer exists.** `WebGui` was removed; only a headless
+  `Mod/Web/App` remains in both master and the 1.1.3 tag. The current way to host
+  HTML in the window is a `QWebEngineView` in a `QDockWidget` or the MDI area,
+  which is what FreeCAD's own Help module does. This panel follows that pattern.
+- **QtWebEngine is optional in FreeCAD builds.** FreeCAD's Help module carries a
+  fallback for exactly this, so the panel probes the same way and opens the
+  system browser rather than failing. If your build lacks it, embedding is not
+  possible at all:
+
+  ```python
+  from cascadia_bridge import panel; panel.webengine_available()
+  ```
+
+The panel keeps a persistent web profile under FreeCAD's user data directory, so
+the Cascadia session survives restarts. Without that, an embedded panel means
+logging in on every launch — worse than a second window.
+
+## Tests
+
+```bash
+python tests/test_panel.py                              # no FreeCAD needed
+python tests/test_fcstd_scan.py --agent-src <agent/src>
+python tests/test_preflight.py  --agent-src <agent/src>
+
+CASCADIA_API_KEY=csc_... CASCADIA_ITEM_ID=<uuid> python tests/test_roundtrip.py
+```
+
+65 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
+FCStd archives, 17 over the preflight gates, 12 over the panel's URL and route
+resolution — negative cases included, since a check that cannot fail is not a
+check. The panel's Qt half needs a running FreeCAD and is exercised by hand;
+what is tested here is where it points, which is where a silent 404 comes from.
+
+## Scope
+
+Deliberately not included:
+
+- **The mechanical design agent.** It needs Python 3.12, psycopg, neo4j and
+  pgvector, and cannot live in FreeCAD's bundled interpreter. It is already an
+  external MCP server.
+- **`freecad-mcp`.** A separate third-party addon, vendored at its own pinned
+  commit by the script above.
+- **Checkout/check-in toolbar buttons.** The coding agent drives those
+  conversationally today. Adding commands later is additive — same package, same
+  bridge.
+
+## Repository note
+
+This currently lives inside the Cascadia tree, whose edition manifest declares
+every file AGPL-3.0-or-later, so `npm run license:check` flags it. It shares no
+code with Cascadia and talks to it over HTTP, so it can be split out whenever
+you want it under its own licence:
+
+```bash
+git subtree split --prefix=cascadia-freecad -b addon-only
+# then push that branch to a new repository
+```
+
+Splitting is also what makes `git pull` updates and Addon Manager installs work,
+since both operate on a repository root.

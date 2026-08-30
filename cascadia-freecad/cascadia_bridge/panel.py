@@ -15,14 +15,14 @@ so this module detects it the same way and degrades to the system browser rather
 than failing to import. Verified against the FreeCAD 1.1.3 tag, which is the
 build the design agent certifies.
 
-Install: drop this file in your FreeCAD macro directory, or add its directory to
-``sys.path`` and ``import CascadiaPanel``.
+Shipped as part of the Cascadia addon, so FreeCAD has already put this package
+on ``sys.path`` by the time anything calls it.
 
-    import CascadiaPanel
-    CascadiaPanel.show()                       # dock panel (default)
-    CascadiaPanel.show(as_tab=True)            # MDI tab beside the 3D view
-    CascadiaPanel.show_item("<item-id>")       # deep-link to one part
-    CascadiaPanel.hide()
+    from cascadia_bridge import panel
+    panel.show()                       # dock panel (default)
+    panel.show(as_tab=True)            # MDI tab beside the 3D view
+    panel.show_part("<part-id>")       # deep-link
+    panel.hide()
 """
 
 from __future__ import annotations
