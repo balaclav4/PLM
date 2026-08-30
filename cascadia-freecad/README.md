@@ -10,24 +10,30 @@ index, and nothing phones home.
 ## Install
 
 ```bash
-./install-local.sh          # symlink — edits take effect on restart
-./install-local.sh --copy   # copy instead
+python install.py --where   # report what was found, change nothing
+python install.py           # symlink — edits take effect on restart
+python install.py --copy    # copy instead
+python install.py --uninstall
 ```
 
-The script asks FreeCAD where its user directory is rather than guessing per
-platform. If FreeCAD is not on your PATH, the script says so and you can pass
-the location in directly:
+Python rather than a shell script because FreeCAD's certified platform is
+Windows, where a `.sh` is useless. Start with `--where`: it prints the FreeCAD
+it found, the user directory, how it worked that out, and whether the addon is
+already installed — without touching anything.
 
-```bash
-FREECAD_USER_DIR=/path/to/FreeCAD/user/dir ./install-local.sh
-```
+It looks for FreeCAD's user directory in three ways, in order: the
+`FREECAD_USER_DIR` environment variable, then `FreeCAD --get-config UserAppData`
+if a FreeCAD is on PATH, then the standard location for your platform
+(`%APPDATA%\FreeCAD`, `~/Library/Application Support/FreeCAD`,
+`~/.local/share/FreeCAD`). If none of those work it says exactly what it checked
+rather than guessing and installing somewhere FreeCAD will never look.
 
-On most systems that is `~/.local/share/FreeCAD` (Linux),
-`~/Library/Application Support/FreeCAD` (macOS) or `%APPDATA%\FreeCAD`
-(Windows) — but the script prefers to ask FreeCAD rather than assume.
+`--get-config` is a non-interactive config query. Note for anyone tempted to
+script FreeCAD themselves: `-c` is **`--console`**, which starts an interactive
+interpreter and will hang a script trying to read its output.
 
-Restart FreeCAD and pick **Cascadia PLM** from the workbench selector. There are
-two buttons:
+Restart FreeCAD, then **View → Workbench → Cascadia PLM** (or the workbench
+dropdown in the toolbar). There are two buttons:
 
 - **Cascadia PLM status** — reports whether this build can dock the panel and
   where the panel points. Click this first; it needs no Python console.
@@ -138,6 +144,7 @@ logging in on every launch — worse than a second window.
 ## Tests
 
 ```bash
+python tests/test_install.py                            # no FreeCAD needed
 python tests/test_panel.py                              # no FreeCAD needed
 python tests/test_fcstd_scan.py --agent-src <agent/src>
 python tests/test_preflight.py  --agent-src <agent/src>
@@ -145,8 +152,9 @@ python tests/test_preflight.py  --agent-src <agent/src>
 CASCADIA_API_KEY=csc_... CASCADIA_ITEM_ID=<uuid> python tests/test_roundtrip.py
 ```
 
-76 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
-FCStd archives, 17 over the preflight gates, 23 over the panel's URL, route and status
+91 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
+FCStd archives, 17 over the preflight gates, 23 over the panel's URL, route and status, and 15 over the
+installer's path resolution
 resolution — negative cases included, since a check that cannot fail is not a
 check. The panel's Qt half needs a running FreeCAD and is exercised by hand;
 what is tested here is where it points, which is where a silent 404 comes from.
