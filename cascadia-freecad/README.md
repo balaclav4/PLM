@@ -9,6 +9,12 @@ index, and nothing phones home.
 
 ## Install
 
+If anything goes wrong, one command reports the whole picture:
+
+```bash
+python doctor.py            # read-only: FreeCAD, user dir, Mod contents, load check
+```
+
 ```bash
 python install.py --where   # report what was found, change nothing
 python install.py           # symlink — edits take effect on restart
@@ -145,6 +151,7 @@ logging in on every launch — worse than a second window.
 
 ```bash
 python tests/test_install.py                            # no FreeCAD needed
+python tests/test_workbench_load.py                     # no FreeCAD needed
 python tests/test_panel.py                              # no FreeCAD needed
 python tests/test_fcstd_scan.py --agent-src <agent/src>
 python tests/test_preflight.py  --agent-src <agent/src>
@@ -152,9 +159,9 @@ python tests/test_preflight.py  --agent-src <agent/src>
 CASCADIA_API_KEY=csc_... CASCADIA_ITEM_ID=<uuid> python tests/test_roundtrip.py
 ```
 
-91 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
-FCStd archives, 17 over the preflight gates, 23 over the panel's URL, route and status, and 15 over the
-installer's path resolution
+106 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
+FCStd archives, 17 over the preflight gates, 23 over the panel's URL, route and status, 15 over the installer's path
+resolution, and 15 over the workbench module loading and registering
 resolution — negative cases included, since a check that cannot fail is not a
 check. The panel's Qt half needs a running FreeCAD and is exercised by hand;
 what is tested here is where it points, which is where a silent 404 comes from.
