@@ -27,6 +27,11 @@ Windows, where a `.sh` is useless. Start with `--where`: it prints the FreeCAD
 it found, the user directory, how it worked that out, and whether the addon is
 already installed — without touching anything.
 
+> **fish shell users:** `VAR=value command` is bash syntax and does not work in
+> fish. Use `env VAR=value command`, e.g.
+> `env FREECAD_USER_DIR=/path python install.py`, or `set -x VAR value` first.
+> The same applies to `CASCADIA_URL` and `CASCADIA_API_KEY` below.
+
 It looks for FreeCAD's user directory in three ways, in order: the
 `FREECAD_USER_DIR` environment variable, then `FreeCAD --get-config UserAppData`
 if a FreeCAD is on PATH, then the standard location for your platform
