@@ -66,6 +66,12 @@ def main() -> int:
             not list(target.rglob("__pycache__")),
         )
 
+        print("\nlauncher macro")
+        macro = install.install_macro(root)
+        check("the macro is installed", macro is not None and macro.exists(), str(macro))
+        check("it lands in Macro/", macro.parent == root / "Macro")
+        check("it references the panel", "cascadia_bridge" in macro.read_text())
+
         print("\nwhat FreeCAD would import")
         sys.path.insert(0, str(target))
         for module in ("cascadia_bridge", "cascadia_bridge.panel"):
@@ -79,6 +85,7 @@ def main() -> int:
         check("reinstall over an existing copy works", (target / "package.xml").exists())
         install.uninstall(root)
         check("uninstall removes it", not target.exists())
+        check("uninstall removes the macro too", not (root / "Macro" / install.MACRO_NAME).exists())
 
     if saved is None:
         os.environ.pop("FREECAD_USER_DIR", None)

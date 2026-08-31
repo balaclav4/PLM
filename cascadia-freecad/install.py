@@ -36,6 +36,8 @@ ADDON_NAME = "CascadiaPLM"
 SOURCE = Path(__file__).resolve().parent
 
 # Only these are copied into Mod/ — tests and scratch files have no business there.
+MACRO_NAME = "CascadiaPLM.FCMacro"
+
 ADDON_CONTENTS = (
     "package.xml",
     "Init.py",
@@ -169,17 +171,42 @@ def install(user_dir: Path, copy: bool) -> Path:
     return target
 
 
+def install_macro(user_dir: Path) -> Path | None:
+    """Copy the launcher macro into FreeCAD's Macro directory.
+
+    A workbench is only reachable through whatever UI is running, and a replaced
+    interface (FreeCAD-Ribbon, for instance) builds its layout from its own
+    stored structure, so a newly installed workbench may not appear as a tab.
+    Macros are reachable in every FreeCAD UI, which makes this the reliable way
+    in.
+    """
+    source = SOURCE / MACRO_NAME
+    if not source.exists():
+        return None
+    macro_dir = user_dir / "Macro"
+    macro_dir.mkdir(parents=True, exist_ok=True)
+    target = macro_dir / MACRO_NAME
+    shutil.copy2(source, target)
+    return target
+
+
 def uninstall(user_dir: Path, quiet: bool = False) -> None:
     target = user_dir / "Mod" / ADDON_NAME
+    removed = False
     if target.is_symlink():
         target.unlink()
+        removed = True
     elif target.is_dir():
         shutil.rmtree(target)
-    elif not quiet:
-        print(f"Nothing installed at {target}")
-        return
+        removed = True
+
+    macro = user_dir / "Macro" / MACRO_NAME
+    if macro.exists():
+        macro.unlink()
+        removed = True
+
     if not quiet:
-        print(f"Removed {target}")
+        print(f"Removed {target}" if removed else f"Nothing installed at {target}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -205,13 +232,18 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"FreeCAD user directory: {user_dir}  (via {how})")
     install(user_dir, copy=args.copy)
+    macro = install_macro(user_dir)
+    if macro:
+        print(f"Installed launcher macro: {macro}")
 
     print(
         "\nInstalled. Next:\n"
         "  1. Restart FreeCAD.\n"
-        "  2. View > Workbench > Cascadia PLM  (or the workbench dropdown in the toolbar).\n"
-        "  3. Click 'Cascadia PLM status' first — it reports whether this build can\n"
-        "     dock the panel, and where the panel points.\n\n"
+        "  2. Macro > Macros... > CascadiaPLM > Execute\n"
+        "     (works in any FreeCAD UI, including replaced ones like Ribbon)\n"
+        "     or, in the stock UI, View > Workbench > Cascadia PLM.\n"
+        "  3. The macro prints a status report first — whether this build can dock\n"
+        "     the panel, and where the panel points.\n\n"
         "Set CASCADIA_URL before launching FreeCAD to point it at your instance."
     )
     return 0

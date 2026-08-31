@@ -43,8 +43,12 @@ rather than guessing and installing somewhere FreeCAD will never look.
 script FreeCAD themselves: `-c` is **`--console`**, which starts an interactive
 interpreter and will hang a script trying to read its output.
 
-Restart FreeCAD, then **View → Workbench → Cascadia PLM** (or the workbench
-dropdown in the toolbar). There are two buttons:
+Restart FreeCAD, then either:
+
+- **Macro → Macros… → CascadiaPLM → Execute** — works in every FreeCAD UI, and
+  prints the status report before opening the panel. Use this if your interface
+  has been replaced (see below).
+- **View → Workbench → Cascadia PLM** in the stock UI. There are two buttons:
 
 - **Cascadia PLM status** — reports whether this build can dock the panel and
   where the panel points. Click this first; it needs no Python console.
@@ -135,6 +139,18 @@ To vendor the third-party FreeCAD GUI MCP at the commit the agent audited:
 ./scripts/vendor-freecad-mcp.sh ../freecad-mcp [your-fork-url]
 ```
 
+### If the workbench does not appear
+
+Addons that replace FreeCAD's interface — **FreeCAD-Ribbon** is the common one —
+build their layout from a stored structure plus `Gui.listWorkbenches()`, so a
+newly installed workbench may not surface as a tab, and the stock
+`View → Workbench` menu may not exist at all. The workbench is registered
+either way; you just cannot reach it by the usual route.
+
+The macro above sidesteps this entirely. To confirm what is going on, move
+`Mod/FreeCAD-Ribbon` aside and restart: the stock menus return, and
+`View → Workbench → Cascadia PLM` should be listed.
+
 ## Two FreeCAD facts worth knowing
 
 - **The Web workbench no longer exists.** `WebGui` was removed; only a headless
@@ -164,9 +180,9 @@ python tests/test_preflight.py  --agent-src <agent/src>
 CASCADIA_API_KEY=csc_... CASCADIA_ITEM_ID=<uuid> python tests/test_roundtrip.py
 ```
 
-106 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
-FCStd archives, 17 over the preflight gates, 23 over the panel's URL, route and status, 15 over the installer's path
-resolution, and 15 over the workbench module loading and registering
+110 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
+FCStd archives, 17 over the preflight gates, 23 over the panel's URL, route and status, 19 over the installer's path
+resolution and macro handling, and 15 over the workbench module loading and registering
 resolution — negative cases included, since a check that cannot fail is not a
 check. The panel's Qt half needs a running FreeCAD and is exercised by hand;
 what is tested here is where it points, which is where a silent 404 comes from.
