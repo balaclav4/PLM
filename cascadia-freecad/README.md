@@ -164,6 +164,22 @@ The macro above sidesteps this entirely. To confirm what is going on, move
   and the panel raises a dialog rather than only logging to the Report view,
   which is hidden by default too.
 
+### Navigating
+
+The panel carries browser chrome above the view: **back**, **forward**,
+**reload**, **stop**, **home**, an **address bar**, and **open externally**
+(hands the current page to your normal browser). A thin progress line shows
+under the toolbar while a page loads.
+
+Back, forward, reload and stop are bound to the web page's own actions, so Qt
+manages their enabled state — back greys out with no history, stop is live only
+while loading.
+
+The address bar takes a path as readily as a URL: `/parts` goes to the current
+instance, `localhost:3000/x` gets a scheme added, and a full URL is used as
+typed. It stops updating while focused so it does not overwrite what you are
+mid-way through typing.
+
 The panel keeps a persistent web profile under FreeCAD's user data directory, so
 the Cascadia session survives restarts. Without that, an embedded panel means
 logging in on every launch — worse than a second window.
@@ -180,8 +196,8 @@ python tests/test_preflight.py  --agent-src <agent/src>
 CASCADIA_API_KEY=csc_... CASCADIA_ITEM_ID=<uuid> python tests/test_roundtrip.py
 ```
 
-110 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
-FCStd archives, 17 over the preflight gates, 23 over the panel's URL, route and status, 19 over the installer's path
+122 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
+FCStd archives, 17 over the preflight gates, 42 over the panel's URL, route, status and address-bar handling, 19 over the installer's path
 resolution and macro handling, and 15 over the workbench module loading and registering
 resolution — negative cases included, since a check that cannot fail is not a
 check. The panel's Qt half needs a running FreeCAD and is exercised by hand;

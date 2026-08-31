@@ -92,6 +92,44 @@ def main() -> int:
     check("the page mentions CASCADIA_URL", "CASCADIA_URL" in page)
     check("the page is themed for dark mode too", "prefers-color-scheme: dark" in page)
 
+    print("\naddress bar input")
+    base = "http://localhost:3000"
+    cases = [
+        ("/parts/1", "http://localhost:3000/parts/1", "a path stays on this instance"),
+        ("parts", "http://localhost:3000/parts", "a bare word is a path, not a host"),
+        ("localhost:3000/x", "http://localhost:3000/x", "host:port gets a scheme"),
+        ("host.local:8080", "http://host.local:8080", "a dotted host gets a scheme"),
+        ("https://a.example/y", "https://a.example/y", "a full URL is untouched"),
+        ("  /bom  ", "http://localhost:3000/bom", "whitespace is trimmed"),
+        ("", base, "empty goes home"),
+    ]
+    for typed, expected, why in cases:
+        got = panel.normalize_typed_url(typed, base)
+        check(why, got == expected, f"{typed!r} -> {got!r}, wanted {expected!r}")
+
+    check(
+        "a trailing slash on the base does not double up",
+        panel.normalize_typed_url("/parts", "http://x:3000/") == "http://x:3000/parts",
+    )
+
+    print("\ntoolbar plumbing")
+    check("the view unwrapper handles a bare widget", panel._view_of("plain") == "plain")
+
+    class _Holder:
+        web_view = "the view"
+
+    check("the view unwrapper finds a wrapped view", panel._view_of(_Holder()) == "the view")
+
+    class _Qt6Page:
+        class WebAction:
+            Back = "qt6-back"
+
+    class _Qt5Page:
+        Back = "qt5-back"
+
+    check("web actions resolve on Qt6 scoped enums", panel._web_action(_Qt6Page, "Back") == "qt6-back")
+    check("web actions resolve on Qt5 flat enums", panel._web_action(_Qt5Page, "Back") == "qt5-back")
+
     print("\nworking-copy deep link")
     with tempfile.TemporaryDirectory() as tmp:
         workdir = Path(tmp)

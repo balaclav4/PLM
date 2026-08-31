@@ -183,6 +183,61 @@ launching FreeCAD, or call
 """
 
 
+def normalize_typed_url(text: str, base: str | None = None) -> str:
+    """Turn what someone types in the address bar into a URL worth loading.
+
+    A path goes to the current instance, a bare host gets a scheme, and an
+    already-complete URL is left alone. Without this, typing ``/parts`` loads
+    ``file:///parts`` and typing ``localhost:3000`` is read as the ``localhost``
+    scheme.
+    """
+    text = text.strip()
+    if not text:
+        return base or base_url()
+    root = (base or base_url()).rstrip("/")
+    if text.startswith("/"):
+        return root + text
+    if "://" in text:
+        return text
+    # host:port or host/path — a scheme is missing, not a relative path.
+    head = text.split("/", 1)[0]
+    if "." in head or ":" in head or head in ("localhost",):
+        return "http://" + text
+    return f"{root}/{text}"
+
+
+def _web_action(page_cls, name: str):
+    """``QWebEnginePage.WebAction.<name>``, across Qt5 and Qt6 enum layouts.
+
+    Qt6 scopes enums under ``WebAction``; Qt5 exposed them on the class.
+    """
+    holder = getattr(page_cls, "WebAction", page_cls)
+    return getattr(holder, name)
+
+
+def _icon(widget, theme_name: str, standard_name: str):
+    """A themed icon, falling back to Qt's built-in style icons.
+
+    Icon themes are frequently missing or misconfigured — one machine here logs
+    six missing themes at startup — so never depend on ``fromTheme`` alone.
+    """
+    from PySide import QtGui, QtWidgets
+
+    icon = QtGui.QIcon.fromTheme(theme_name)
+    if not icon.isNull():
+        return icon
+    holder = getattr(QtWidgets.QStyle, "StandardPixmap", QtWidgets.QStyle)
+    pixmap = getattr(holder, standard_name, None)
+    if pixmap is None:
+        return QtGui.QIcon()
+    return widget.style().standardIcon(pixmap)
+
+
+def _view_of(widget):
+    """The web view inside a panel container, or the widget itself."""
+    return getattr(widget, "web_view", widget)
+
+
 def _build_view(url: str):
     from PySide import QtCore
 
@@ -213,7 +268,106 @@ def _build_view(url: str):
     else:
         # setHtml needs a base URL for relative resolution; the target serves.
         view.setHtml(_unreachable_html(url), QtCore.QUrl(url))
-    return view
+
+    try:
+        return _wrap_with_toolbar(view, page_cls)
+    except Exception as error:
+        # Chrome is a convenience; losing it must not cost the panel itself.
+        _warn(f"Cascadia PLM: navigation toolbar unavailable ({error})")
+        return view
+
+
+def _wrap_with_toolbar(view, page_cls):
+    """Put browser chrome above the view: back, forward, reload, home, address.
+
+    A web view on its own has no navigation at all — no back button, no way to
+    see or type an address, no reload. Cascadia is a multi-page application, so
+    without these the panel is a one-way trip into whatever page loaded first.
+
+    Back/forward/reload/stop are bound to the page's own ``WebAction``s rather
+    than to ``view.back()`` and friends, so Qt manages their enabled state: back
+    greys out with no history, stop only while loading.
+    """
+    from PySide import QtCore, QtWidgets
+
+    if page_cls is None:
+        # No custom page was installed, so ask the live one for its class.
+        page_cls = type(view.page())
+
+    container = QtWidgets.QWidget()
+    layout = QtWidgets.QVBoxLayout(container)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(0)
+
+    bar = QtWidgets.QToolBar(container)
+    bar.setIconSize(QtCore.QSize(16, 16))
+    bar.setMovable(False)
+
+    def add(theme, standard, action_name, tip):
+        action = view.pageAction(_web_action(page_cls, action_name))
+        action.setIcon(_icon(container, theme, standard))
+        action.setToolTip(tip)
+        bar.addAction(action)
+        return action
+
+    add("go-previous", "SP_ArrowBack", "Back", "Back")
+    add("go-next", "SP_ArrowForward", "Forward", "Forward")
+    add("view-refresh", "SP_BrowserReload", "Reload", "Reload")
+    add("process-stop", "SP_BrowserStop", "Stop", "Stop loading")
+
+    home = bar.addAction(_icon(container, "go-home", "SP_DirHomeIcon"), "Home")
+    home.setToolTip("Back to the Cascadia home page")
+    home.triggered.connect(lambda: view.load(QtCore.QUrl(base_url())))
+
+    address = QtWidgets.QLineEdit(container)
+    address.setPlaceholderText("Address, or a path such as /parts")
+    address.setClearButtonEnabled(True)
+    bar.addWidget(address)
+
+    external = bar.addAction(
+        _icon(container, "window-new", "SP_DesktopIcon"), "Open externally"
+    )
+    external.setToolTip("Open the current page in your normal browser")
+
+    def go():
+        view.load(QtCore.QUrl(normalize_typed_url(address.text())))
+        view.setFocus()
+
+    def show_url(qurl):
+        # Do not fight the user mid-edit: only refresh when unfocused.
+        if not address.hasFocus():
+            address.setText(qurl.toString())
+
+    def open_external():
+        import webbrowser
+
+        webbrowser.open(view.url().toString() or base_url())
+
+    address.returnPressed.connect(go)
+    external.triggered.connect(open_external)
+    view.urlChanged.connect(show_url)
+
+    progress = QtWidgets.QProgressBar(container)
+    progress.setMaximumHeight(2)
+    progress.setTextVisible(False)
+    progress.setRange(0, 100)
+    progress.hide()
+
+    def on_progress(value):
+        progress.setValue(value)
+        progress.setVisible(0 < value < 100)
+
+    view.loadProgress.connect(on_progress)
+    view.loadFinished.connect(lambda ok: progress.hide())
+
+    layout.addWidget(bar)
+    layout.addWidget(progress)
+    layout.addWidget(view, 1)
+
+    show_url(view.url())
+    container.web_view = view
+    container.address_bar = address
+    return container
 
 
 def status() -> dict:
@@ -311,12 +465,12 @@ def show(url: str | None = None, as_tab: bool = False):
     if existing is not None and not as_tab:
         existing.show()
         existing.raise_()
-        view = existing.widget()
+        widget = existing.widget()
         if url:
             from PySide import QtCore
 
-            view.load(QtCore.QUrl(target))
-        return view
+            _view_of(widget).load(QtCore.QUrl(target))
+        return widget
 
     view = _build_view(target)
     prefs = _prefs()
