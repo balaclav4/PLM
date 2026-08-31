@@ -68,10 +68,16 @@ def candidate_user_dirs() -> list[Path]:
     return dirs
 
 
-def ask_freecad() -> tuple[Path | None, str | None]:
-    """Query a FreeCAD on PATH for its user directory.
+def ask_freecad(key: str = "UserAppData") -> tuple[Path | None, str | None]:
+    """Query a FreeCAD on PATH for a configuration path.
 
-    Returns ``(path, executable)``; ``(None, None)`` when no FreeCAD answered.
+    ``UserAppData`` is the user directory, ``UserMacroPath`` the macro
+    directory. Returns ``(path, executable)``; ``(None, None)`` if no FreeCAD
+    answered.
+
+    The output is scanned from the end for a line that is a real directory:
+    FreeCAD prints Qt and icon-theme warnings on some systems, and on at least
+    one it segfaults after answering — the answer is still in there.
     """
     for name in FREECAD_EXECUTABLES:
         executable = shutil.which(name)
@@ -79,7 +85,7 @@ def ask_freecad() -> tuple[Path | None, str | None]:
             continue
         try:
             result = subprocess.run(
-                [executable, "--get-config", "UserAppData"],
+                [executable, "--get-config", key],
                 capture_output=True,
                 text=True,
                 timeout=60,
@@ -91,6 +97,22 @@ def ask_freecad() -> tuple[Path | None, str | None]:
             if line.strip() and candidate.is_dir():
                 return candidate, executable
     return None, None
+
+
+def resolve_macro_dir(user_dir: Path) -> tuple[Path, str]:
+    """Where FreeCAD looks for macros.
+
+    It is configurable (Macro > Macros... shows "User macros location"), so ask
+    FreeCAD rather than assume. Falls back to the standard ``Macro`` beside the
+    user directory.
+    """
+    override = os.environ.get("FREECAD_MACRO_DIR")
+    if override:
+        return Path(override).expanduser(), "FREECAD_MACRO_DIR"
+    path, executable = ask_freecad("UserMacroPath")
+    if path is not None:
+        return path, f"{executable} --get-config UserMacroPath"
+    return user_dir / "Macro", "standard location beside the user directory"
 
 
 def resolve_user_dir() -> tuple[Path | None, str]:
@@ -183,7 +205,7 @@ def install_macro(user_dir: Path) -> Path | None:
     source = SOURCE / MACRO_NAME
     if not source.exists():
         return None
-    macro_dir = user_dir / "Macro"
+    macro_dir, _ = resolve_macro_dir(user_dir)
     macro_dir.mkdir(parents=True, exist_ok=True)
     target = macro_dir / MACRO_NAME
     shutil.copy2(source, target)
@@ -200,7 +222,8 @@ def uninstall(user_dir: Path, quiet: bool = False) -> None:
         shutil.rmtree(target)
         removed = True
 
-    macro = user_dir / "Macro" / MACRO_NAME
+    macro_dir, _ = resolve_macro_dir(user_dir)
+    macro = macro_dir / MACRO_NAME
     if macro.exists():
         macro.unlink()
         removed = True
@@ -234,7 +257,9 @@ def main(argv: list[str] | None = None) -> int:
     install(user_dir, copy=args.copy)
     macro = install_macro(user_dir)
     if macro:
+        _, macro_how = resolve_macro_dir(user_dir)
         print(f"Installed launcher macro: {macro}")
+        print(f"  macro directory found via: {macro_how}")
 
     print(
         "\nInstalled. Next:\n"

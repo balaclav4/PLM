@@ -83,6 +83,18 @@ def main() -> int:
 
     print(f"\nresolved: {user_dir}   (via {how})")
 
+    rule("macro directory")
+    macro_dir, macro_how = install.resolve_macro_dir(user_dir)
+    print(f"macros: {macro_dir}")
+    print(f"  found via: {macro_how}")
+    macro = macro_dir / install.MACRO_NAME
+    print(f"  {install.MACRO_NAME}: {'present' if macro.exists() else 'NOT PRESENT'}")
+    if not macro.exists():
+        print("  (run  python install.py  to place it)")
+    print("  In FreeCAD, Macro > Macros... shows the location it actually reads;")
+    print("  if it differs from the above, point it here or re-run with")
+    print("  FREECAD_MACRO_DIR set to that path.")
+
     rule("what freecad would load")
     mod = user_dir / "Mod"
     if not mod.is_dir():
@@ -126,13 +138,20 @@ def main() -> int:
 
     rule("verdict")
     print("The addon is installed and its workbench module loads.")
-    print("In FreeCAD:  View > Workbench > Cascadia PLM")
-    print("\nIf it is still not listed there:")
+    print("\nIn FreeCAD, either:")
+    print("  Macro > Macros... > CascadiaPLM > Execute      (works in any UI)")
+    print("  View > Workbench > Cascadia PLM                (stock UI only)")
+
+    replacements = [n for n in ("FreeCAD-Ribbon", "Ribbon") if (mod / n).exists()]
+    if replacements:
+        print(f"\nNOTE: {', '.join(replacements)} is installed. Addons that replace")
+        print("FreeCAD's interface build their layout from their own stored structure,")
+        print("so this workbench may not appear as a tab and View > Workbench may not")
+        print("exist. Use the macro. To check, move the replacement aside and restart.")
+
+    print("\nIf neither route works:")
     print("  1. FreeCAD must be restarted after installing.")
-    print("  2. Check FreeCAD's Report view (View > Panels > Report view) for a")
-    print("     traceback mentioning CascadiaPLM — that is where load errors go.")
-    print("  3. Confirm FreeCAD is using this user directory:")
-    print("     Edit > Preferences > General shows the paths it reads.")
+    print("  2. Check the Report view for a traceback mentioning CascadiaPLM.")
     return 0
 
 
