@@ -213,17 +213,29 @@ addonmanager_workers_startup.py, in run
 TypeError: sequence item 0: expected str instance, Addon found
 ```
 
-It joins `Addon` objects as if they were strings. Upstream fixed it — current
-Addon Manager reads `', '.join([x.display_name for x in deps.external_addons])`
-— so a newer FreeCAD resolves it.
+It joins `Addon` objects as if they were strings.
+
+**This affects stock FreeCAD 1.1.3.** Its `src/Mod/AddonManager` submodule pins
+AddonManager `937b687`, and that commit carries the broken line — at line 706,
+matching the traceback exactly. The AddonManager project fixed it upstream in
+`a62f301` (`', '.join([x.display_name for x in ...])`), but that fix is not in
+the 1.1.3 release.
+
+So "update FreeCAD" is not a workaround here: 1.1.3 is current, and it is also
+the build the mechanical design agent certifies, so downgrading or upgrading to
+dodge this trades one blocker for another.
 
 It is not caused by this addon: that list is populated only from `<depend>`
 elements in a `package.xml`, and this one declares none. It fires when any
 _already installed_ addon has an unmet dependency, and it crashes the manager
 before it can show you anything.
 
-Until FreeCAD is updated, install with `python install.py`, which does the same
-job without going through Addon Manager.
+Until a FreeCAD release ships the fixed AddonManager, install with
+`python install.py`. On 1.1.3 that is the install path, not a fallback.
+
+The crash only fires when an installed addon has an unmet dependency, so
+removing or repairing that addon also clears it — but Addon Manager crashes
+before telling you which addon, which is what makes it awkward.
 
 The URL and branch above are also recorded in `package.xml`; Addon Manager warns
 if they disagree with where it actually fetched from, so change both together.
