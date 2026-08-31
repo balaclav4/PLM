@@ -71,7 +71,7 @@ def main() -> int:
 
     print("\nstatus report (replaces needing a Python console)")
     data = panel.status()
-    for key in ("webengine", "embedding", "base_url", "url_source", "in_freecad", "python"):
+    for key in ("webengine", "embedding", "base_url", "url_source", "in_freecad", "python", "cascadia_reachable"):
         check(f"status reports {key}", key in data)
     check("status knows FreeCAD is absent here", data["in_freecad"] is False)
     check("status agrees with the probe", data["webengine"] == panel.webengine_available())
@@ -82,6 +82,15 @@ def main() -> int:
     os.environ["CASCADIA_URL"] = "http://from-env:3000"
     check("status attributes an env URL", "environment" in panel.status()["url_source"])
     os.environ.pop("CASCADIA_URL", None)
+
+    print("\nunreachable Cascadia is explained, not dumped as a browser error")
+    check("an unroutable address is not reachable", panel.reachable("http://127.0.0.1:9", timeout=1) is False)
+    page = panel._unreachable_html("http://example.invalid:3000")
+    check("the page names the address tried", "example.invalid:3000" in page)
+    check("the page says how to run Cascadia", "npm run dev" in page)
+    check("the page explains the panel does not start one", "does not start one" in page)
+    check("the page mentions CASCADIA_URL", "CASCADIA_URL" in page)
+    check("the page is themed for dark mode too", "prefers-color-scheme: dark" in page)
 
     print("\nworking-copy deep link")
     with tempfile.TemporaryDirectory() as tmp:

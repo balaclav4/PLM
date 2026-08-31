@@ -119,6 +119,70 @@ def _profile_directory() -> str:
     return os.path.join(root, "Cascadia", "webprofile")
 
 
+def reachable(url: str, timeout: float = 2.0) -> bool:
+    """Is something answering at ``url``?
+
+    Any HTTP response counts, including 401 or 404: the question is whether a
+    server is there, not whether that particular path exists.
+    """
+    import urllib.error
+    import urllib.request
+
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        opener.open(urllib.request.Request(url, method="GET"), timeout=timeout)
+        return True
+    except urllib.error.HTTPError:
+        return True
+    except Exception:
+        return False
+
+
+def _unreachable_html(url: str) -> str:
+    """Explain an unreachable Cascadia, rather than showing a browser error.
+
+    The panel is only a window onto Cascadia; it does not start one. Landing on
+    Chromium's default error page makes that look like a broken addon instead of
+    a server that is not running.
+    """
+    return f"""<!doctype html>
+<meta charset="utf-8">
+<style>
+  body {{ font: 15px/1.6 system-ui, sans-serif; margin: 0; padding: 32px;
+         color: #1a1d1c; background: #f4f4f1; }}
+  h1 {{ font-size: 19px; margin: 0 0 4px; }}
+  p {{ max-width: 52ch; color: #4a5250; }}
+  code {{ background: #e4e5df; padding: 1px 5px; border-radius: 3px;
+          font: 13px ui-monospace, monospace; }}
+  pre {{ background: #fff; border: 1px solid #d5d6d0; padding: 12px;
+         overflow-x: auto; font: 12.5px ui-monospace, monospace; }}
+  .url {{ font: 13px ui-monospace, monospace; color: #0e6a60; }}
+  @media (prefers-color-scheme: dark) {{
+    body {{ color: #e6e7e3; background: #171a19; }}
+    p {{ color: #99a19e; }}
+    code {{ background: #262b2a; }}
+    pre {{ background: #1c201f; border-color: #2f3533; }}
+    .url {{ color: #47bcac; }}
+  }}
+</style>
+<h1>No Cascadia at this address</h1>
+<p class="url">{url}</p>
+<p>Nothing answered there. This panel is a window onto a Cascadia instance &mdash;
+it does not start one, so a Cascadia server has to be running and reachable from
+this machine.</p>
+<p>To run one locally, from your Cascadia checkout:</p>
+<pre>npm install
+npm run db:push
+npm run db:seed
+npm run dev</pre>
+<p>That needs PostgreSQL running and <code>DATABASE_URL</code> set in
+<code>.env</code>. Then re-run the macro.</p>
+<p>If Cascadia is running elsewhere, set <code>CASCADIA_URL</code> before
+launching FreeCAD, or call
+<code>panel.set_base_url("http://host:3000")</code>.</p>
+"""
+
+
 def _build_view(url: str):
     from PySide import QtCore
 
@@ -144,7 +208,11 @@ def _build_view(url: str):
                 profile.setPersistentCookiesPolicy(policy)
         view.setPage(page_cls(profile, view))
 
-    view.load(QtCore.QUrl(url))
+    if reachable(url):
+        view.load(QtCore.QUrl(url))
+    else:
+        # setHtml needs a base URL for relative resolution; the target serves.
+        view.setHtml(_unreachable_html(url), QtCore.QUrl(url))
     return view
 
 
@@ -157,10 +225,12 @@ def status() -> dict:
     import platform
 
     ready = webengine_available()
+    url = base_url()
     return {
         "webengine": ready,
+        "cascadia_reachable": reachable(url),
         "embedding": "available" if ready else "unavailable — panel opens in the system browser",
-        "base_url": base_url(),
+        "base_url": url,
         "url_source": (
             "CASCADIA_URL environment variable"
             if os.environ.get("CASCADIA_URL")
@@ -181,6 +251,7 @@ def status_text() -> str:
             f"QtWebEngine:     {'yes' if data['webengine'] else 'no'}",
             f"Cascadia URL:    {data['base_url']}",
             f"  from:          {data['url_source']}",
+            f"  reachable:     {'yes' if data['cascadia_reachable'] else 'NO — is Cascadia running?'}",
             f"Web profile:     {data['profile_dir']}",
             f"Python:          {data['python']}",
         ]
