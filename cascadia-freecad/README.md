@@ -9,6 +9,24 @@ index, and nothing phones home.
 
 ## Install
 
+### "I pulled but nothing changed"
+
+Two things cache, and both look identical from the outside:
+
+- **`InitGui.py` runs only at FreeCAD startup**, so the toolbar button, the
+  auto-open and any workbench change need a restart — not a macro re-run.
+- **Python caches imported modules**, so a running FreeCAD keeps using the
+  `cascadia_bridge` it loaded at launch. The macro reloads the package before
+  use, which covers panel changes; startup changes still need a restart.
+
+To tell whether FreeCAD is running the code you think it is, compare two
+numbers. `python doctor.py` prints the commit of the checkout on disk and
+whether it is behind the remote; the **Cascadia PLM status** button prints the
+commit FreeCAD actually loaded. If they differ, FreeCAD is running older code.
+
+No pull request is involved in any of this — the addon is pushed straight to the
+branch this checkout tracks, so `git pull` here is the whole update path.
+
 If anything goes wrong, one command reports the whole picture:
 
 ```bash
@@ -209,8 +227,8 @@ python tests/test_preflight.py  --agent-src <agent/src>
 CASCADIA_API_KEY=csc_... CASCADIA_ITEM_ID=<uuid> python tests/test_roundtrip.py
 ```
 
-137 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
-FCStd archives, 17 over the preflight gates, 47 over the panel's URL, route, status, address bar and toolbar, 19 over the installer's path
+144 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
+FCStd archives, 17 over the preflight gates, 54 over the panel's URL, route, status, address bar, toolbar and build reporting, 19 over the installer's path
 resolution and macro handling, and 25 over the workbench module loading, registering, startup and icon
 resolution — negative cases included, since a check that cannot fail is not a
 check. The panel's Qt half needs a running FreeCAD and is exercised by hand;

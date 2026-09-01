@@ -16,6 +16,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+_os_exists = os.path.exists
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from cascadia_bridge import panel  # noqa: E402
@@ -82,6 +84,14 @@ def main() -> int:
     os.environ["CASCADIA_URL"] = "http://from-env:3000"
     check("status attributes an env URL", "environment" in panel.status()["url_source"])
     os.environ.pop("CASCADIA_URL", None)
+
+    print("\nbuild reporting")
+    build = panel.build_info()
+    for key in ("path", "commit", "branch", "dirty"):
+        check(f"build_info reports {key}", key in build)
+    check("it names a real directory", _os_exists(build["path"]), build["path"])
+    check("status carries the commit", panel.status()["build_commit"] == build["commit"])
+    check("status_text shows the build", build["commit"] in panel.status_text())
 
     print("\ntoolbar button")
     import os as _os

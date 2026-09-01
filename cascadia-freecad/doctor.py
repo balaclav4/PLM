@@ -46,6 +46,34 @@ def main() -> int:
     print(f"Python:    {sys.version.split()[0]}  ({sys.executable})")
     print(f"Addon src: {ROOT}")
 
+    rule("which build is this")
+    build = None
+    try:
+        sys.path.insert(0, str(ROOT))
+        from cascadia_bridge import panel
+
+        build = panel.build_info()
+        print(f"commit:    {build['commit']} on {build['branch']}")
+        if build["dirty"]:
+            print("           (uncommitted edits in this checkout)")
+        print(f"source:    {build['path']}")
+    except Exception as error:
+        print(f"could not read build info: {error}")
+
+    fetch = run(["git", "-C", str(ROOT), "fetch", "--quiet"], timeout=120)
+    counts = run(["git", "-C", str(ROOT), "rev-list", "--left-right", "--count", "@{upstream}...HEAD"])
+    if counts and "\t" in counts:
+        behind, ahead = counts.split("\t")[:2]
+        behind, ahead = behind.strip(), ahead.strip()
+        if behind != "0":
+            print(f"\nBEHIND the remote by {behind} commit(s) — run:  git pull")
+        elif ahead != "0":
+            print(f"up to date (and {ahead} local commit(s) ahead)")
+        else:
+            print("up to date with the remote")
+    elif fetch:
+        print(f"could not compare with the remote: {fetch.splitlines()[0][:80]}")
+
     rule("freecad")
     found = []
     for name in install.FREECAD_EXECUTABLES:
@@ -150,8 +178,12 @@ def main() -> int:
         print("exist. Use the macro. To check, move the replacement aside and restart.")
 
     print("\nIf neither route works:")
-    print("  1. FreeCAD must be restarted after installing.")
-    print("  2. Check the Report view for a traceback mentioning CascadiaPLM.")
+    print("  1. FreeCAD must be restarted after installing or pulling — InitGui.py")
+    print("     runs only at startup, and Python caches imported modules, so a")
+    print("     running FreeCAD keeps using the code it loaded.")
+    print("  2. Check the Report view for a line starting 'Cascadia PLM:'.")
+    print("  3. Compare the commit above with what the status button reports")
+    print("     inside FreeCAD. If they differ, FreeCAD is running older code.")
     return 0
 
 

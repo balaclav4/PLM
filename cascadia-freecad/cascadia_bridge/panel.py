@@ -371,6 +371,40 @@ def _wrap_with_toolbar(view, page_cls):
     return container
 
 
+def build_info() -> dict:
+    """Which copy of this addon is actually running.
+
+    "I pulled but nothing changed" has several causes that look identical from
+    the outside — pulled in the wrong directory, FreeCAD not restarted, a copy
+    install shadowing the checkout you edited. Reporting the commit the loaded
+    code came from distinguishes them in one line.
+    """
+    import subprocess
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    root = os.path.dirname(here)
+    info = {"path": root, "commit": "unknown", "dirty": None, "branch": "unknown"}
+
+    def git(*args):
+        return subprocess.run(
+            ["git", "-C", root, *args], capture_output=True, text=True, timeout=15
+        )
+
+    try:
+        head = git("rev-parse", "--short", "HEAD")
+        if head.returncode == 0:
+            info["commit"] = head.stdout.strip()
+        branch = git("rev-parse", "--abbrev-ref", "HEAD")
+        if branch.returncode == 0:
+            info["branch"] = branch.stdout.strip()
+        status = git("status", "--porcelain")
+        if status.returncode == 0:
+            info["dirty"] = bool(status.stdout.strip())
+    except Exception:
+        pass  # a copy install is not a git checkout; "unknown" is the answer
+    return info
+
+
 def status() -> dict:
     """Everything needed to answer "will this work here?" without a console.
 
@@ -381,7 +415,12 @@ def status() -> dict:
 
     ready = webengine_available()
     url = base_url()
+    build = build_info()
     return {
+        "build_commit": build["commit"],
+        "build_branch": build["branch"],
+        "build_dirty": build["dirty"],
+        "build_path": build["path"],
         "webengine": ready,
         "cascadia_reachable": reachable(url),
         "embedding": "available" if ready else "unavailable — panel opens in the system browser",
@@ -409,6 +448,10 @@ def status_text() -> str:
             f"  reachable:     {'yes' if data['cascadia_reachable'] else 'NO — is Cascadia running?'}",
             f"Web profile:     {data['profile_dir']}",
             f"Python:          {data['python']}",
+            f"Addon build:     {data['build_commit']}"
+            + (" (uncommitted edits)" if data["build_dirty"] else "")
+            + f" on {data['build_branch']}",
+            f"  loaded from:   {data['build_path']}",
         ]
     )
 
