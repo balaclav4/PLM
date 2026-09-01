@@ -37,6 +37,7 @@ except ImportError:  # importable outside FreeCAD so the module can be linted/te
     FreeCADGui = None
 
 DOCK_OBJECT_NAME = "CascadiaPlmPanel"
+TOOLBAR_OBJECT_NAME = "CascadiaPlmToolBar"
 PREF_PATH = "User parameter:BaseApp/Preferences/Cascadia"
 DEFAULT_URL = "http://localhost:3000"
 
@@ -511,7 +512,9 @@ def show(url: str | None = None, as_tab: bool = False):
     dock.setFloating(prefs.GetBool("DockFloating", False))
     dock.resize(prefs.GetInt("DockWidth", 480), prefs.GetInt("DockHeight", 800))
     dock.dockLocationChanged.connect(_remember_placement)
+    dock.visibilityChanged.connect(lambda _visible: _sync_toolbar())
     dock.show()
+    _sync_toolbar()
     return view
 
 
@@ -530,6 +533,82 @@ def hide() -> None:
     dock = _existing_dock()
     if dock is not None:
         dock.hide()
+    _sync_toolbar()
+
+
+def _sync_toolbar() -> None:
+    """Refresh the toolbar button's pressed state, if the toolbar exists."""
+    if FreeCADGui is None:
+        return
+    try:
+        from PySide import QtWidgets
+
+        mw = FreeCADGui.getMainWindow()
+        if mw is None:
+            return
+        toolbar = mw.findChild(QtWidgets.QToolBar, TOOLBAR_OBJECT_NAME)
+        if toolbar is not None and hasattr(toolbar, "sync_checked"):
+            toolbar.sync_checked()
+    except Exception:
+        pass
+
+
+def icon_path() -> str:
+    """The addon's own icon file.
+
+    Shipped rather than looked up from an icon theme: themes are routinely
+    missing (one machine here logs six absent themes at startup) and a toolbar
+    button with no icon is a blank square.
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(os.path.dirname(here), "resources", "cascadia.svg")
+
+
+def install_toolbar_button(main_window=None):
+    """Put a Cascadia button on a toolbar owned by the main window.
+
+    A workbench toolbar only exists while that workbench is active, so the
+    button vanishes the moment an engineer switches to Part Design — which is
+    most of the time. Adding the toolbar to the main window directly keeps it
+    visible in every workbench, and survives interfaces that replace FreeCAD's
+    own layout.
+
+    Idempotent: repeated calls find the existing toolbar rather than stacking
+    duplicates.
+    """
+    # Resolve the window before importing Qt: with no window there is nothing to
+    # attach to, and outside FreeCAD there is no PySide to import either.
+    main_window = main_window or (FreeCADGui.getMainWindow() if FreeCADGui else None)
+    if main_window is None:
+        return None
+
+    from PySide import QtGui, QtWidgets
+
+    existing = main_window.findChild(QtWidgets.QToolBar, TOOLBAR_OBJECT_NAME)
+    if existing is not None:
+        return existing
+
+    toolbar = QtWidgets.QToolBar("Cascadia PLM", main_window)
+    toolbar.setObjectName(TOOLBAR_OBJECT_NAME)
+
+    icon = QtGui.QIcon(icon_path())
+    action = toolbar.addAction(icon, "Cascadia PLM")
+    action.setToolTip("Show or hide the Cascadia PLM panel")
+    action.setStatusTip("Show or hide the Cascadia PLM panel")
+    action.setCheckable(True)
+    action.triggered.connect(lambda: toggle())
+
+    def sync_checked():
+        dock = _existing_dock()
+        action.setChecked(bool(dock is not None and dock.isVisible()))
+
+    # Keep the button's pressed state honest when the dock is closed by its own
+    # X rather than by the button.
+    toolbar.sync_checked = sync_checked
+    sync_checked()
+
+    main_window.addToolBar(toolbar)
+    return toolbar
 
 
 def toggle():

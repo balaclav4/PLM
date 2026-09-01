@@ -154,6 +154,20 @@ def main() -> int:
         "webengine_available" in (ROOT / "InitGui.py").read_text(),
     )
 
+    init_gui = (ROOT / "InitGui.py").read_text()
+    check("the toolbar button is installed at startup", "install_toolbar_button" in init_gui)
+    check(
+        "the button goes up even when auto-show is off",
+        init_gui.index("install_toolbar_button") < init_gui.index('GetBool("AutoShow"'),
+        "AutoShow is checked before the button is added",
+    )
+
+    print("\nshipped icon")
+    icon = ROOT / "resources" / "cascadia.svg"
+    check("an icon ships with the addon", icon.exists())
+    check("it is svg", icon.read_text().lstrip().startswith("<?xml") and "<svg" in icon.read_text())
+    check("the workbench uses it", "resources" in init_gui and "cascadia.svg" in init_gui)
+
     print("\nInit.py loads too")
     try:
         exec(compile((ROOT / "Init.py").read_text(), "Init.py", "exec"), {"__name__": "Init"})

@@ -83,6 +83,15 @@ def main() -> int:
     check("status attributes an env URL", "environment" in panel.status()["url_source"])
     os.environ.pop("CASCADIA_URL", None)
 
+    print("\ntoolbar button")
+    import os as _os
+
+    check("the icon path resolves", _os.path.exists(panel.icon_path()), panel.icon_path())
+    check("the toolbar has a stable object name", panel.TOOLBAR_OBJECT_NAME == "CascadiaPlmToolBar")
+    check("dock and toolbar names differ", panel.TOOLBAR_OBJECT_NAME != panel.DOCK_OBJECT_NAME)
+    check("installing without FreeCAD is a no-op", panel.install_toolbar_button(None) is None)
+    check("syncing without FreeCAD does not raise", panel._sync_toolbar() is None)
+
     print("\nunreachable Cascadia is explained, not dumped as a browser error")
     check("an unroutable address is not reachable", panel.reachable("http://127.0.0.1:9", timeout=1) is False)
     page = panel._unreachable_html("http://example.invalid:3000")

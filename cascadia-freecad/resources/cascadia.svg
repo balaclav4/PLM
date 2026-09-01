@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Cascadia mark: three cascading steps, descending left to right, over a
+     baseline. Reads at 16px and holds on light and dark toolbars, so it does
+     not depend on an icon theme being installed. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <g fill="none" stroke="#0E9C8A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6 7 h7 v6"/>
+    <path d="M13 13 h7 v6"/>
+    <path d="M20 19 h7 v6"/>
+  </g>
+  <path d="M5 28 h22" stroke="#7A8785" stroke-width="2.4" stroke-linecap="round"/>
+</svg>

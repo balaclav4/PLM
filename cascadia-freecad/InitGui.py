@@ -36,8 +36,10 @@ class CascadiaPanelCommand:
     """Show or hide the docked Cascadia panel."""
 
     def GetResources(self):
+        from cascadia_bridge import panel
+
         return {
-            "Pixmap": "ApplicationsWeb",
+            "Pixmap": panel.icon_path(),
             "MenuText": "Cascadia PLM panel",
             "ToolTip": "Show or hide Cascadia PLM beside the model",
         }
@@ -101,7 +103,7 @@ FreeCADGui.addCommand("Cascadia_Status", CascadiaStatusCommand())
 class CascadiaWorkbench(FreeCADGui.Workbench):
     MenuText = "Cascadia PLM"
     ToolTip = "Product lifecycle management beside the model"
-    Icon = "ApplicationsWeb"
+    Icon = _os.path.join(_addon_dir, "resources", "cascadia.svg")
 
     def Initialize(self):
         commands = ["Cascadia_Panel", "Cascadia_Status"]
@@ -126,38 +128,51 @@ class CascadiaWorkbench(FreeCADGui.Workbench):
 FreeCADGui.addWorkbench(CascadiaWorkbench())
 
 
-def _auto_show():
-    """Open the panel once the main window exists.
+def _on_startup():
+    """Put the button up, and open the panel unless told not to.
 
     Run from a timer rather than inline: InitGui.py executes while the GUI is
-    still being assembled, and docking into a half-built main window is how you
-    get a panel that appears in the wrong place or not at all.
+    still being assembled, and adding to a half-built main window is how a
+    toolbar or dock ends up in the wrong place or nowhere.
     """
     try:
         from cascadia_bridge import panel
+    except Exception as error:
+        FreeCAD.Console.PrintWarning(f"Cascadia PLM: could not load the panel ({error})\n")
+        return
 
-        if not panel.webengine_available():
-            # Auto-opening the system browser at every FreeCAD launch would be
-            # obnoxious. Leave it to the user on builds that cannot embed.
-            FreeCAD.Console.PrintWarning(
-                "Cascadia PLM: this build has no QtWebEngine, so the panel is "
-                "not opened automatically.\n"
-            )
-            return
+    # The button goes up whatever else happens — it is the way back in when the
+    # panel is closed, and it is wanted even on builds that cannot embed.
+    try:
+        panel.install_toolbar_button()
+    except Exception as error:
+        FreeCAD.Console.PrintWarning(f"Cascadia PLM: could not add the toolbar ({error})\n")
+
+    if not FreeCAD.ParamGet(PREF_PATH).GetBool("AutoShow", True):
+        return
+
+    if not panel.webengine_available():
+        # Auto-opening the system browser at every FreeCAD launch would be
+        # obnoxious. Leave that to the button.
+        FreeCAD.Console.PrintWarning(
+            "Cascadia PLM: this build has no QtWebEngine, so the panel is not "
+            "opened automatically. Use the toolbar button.\n"
+        )
+        return
+
+    try:
         panel.show()
     except Exception as error:  # never let startup decoration break startup
         FreeCAD.Console.PrintWarning(f"Cascadia PLM: could not open the panel ({error})\n")
 
 
-def _schedule_auto_show():
-    if not FreeCAD.ParamGet(PREF_PATH).GetBool("AutoShow", True):
-        return
+def _schedule_startup():
     try:
         from PySide import QtCore
 
-        QtCore.QTimer.singleShot(STARTUP_DELAY_MS, _auto_show)
+        QtCore.QTimer.singleShot(STARTUP_DELAY_MS, _on_startup)
     except Exception as error:
         FreeCAD.Console.PrintWarning(f"Cascadia PLM: could not schedule startup ({error})\n")
 
 
-_schedule_auto_show()
+_schedule_startup()

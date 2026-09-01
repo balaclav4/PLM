@@ -43,13 +43,19 @@ rather than guessing and installing somewhere FreeCAD will never look.
 script FreeCAD themselves: `-c` is **`--console`**, which starts an interactive
 interpreter and will hang a script trying to read its output.
 
-Restart FreeCAD. **The panel opens by itself** — Cascadia is simply there when
+Restart FreeCAD. **A Cascadia button appears in the main toolbar** — always
+visible, in every workbench — and **the panel opens by itself** — Cascadia is simply there when
 FreeCAD is, docked beside the model, with no macro to run and no workbench to
 find.
 
 To reopen it after closing, or to reload the code during development:
 **Macro → Macros… → CascadiaPLM → Execute**. The macro reloads the package
 first, so edits to a symlinked checkout take effect without restarting FreeCAD.
+
+The toolbar button toggles the panel and shows its pressed state, so it stays
+honest when the dock is closed by its own X. It is added to the main window
+rather than to a workbench: a workbench toolbar only exists while that workbench
+is active, so the button would vanish the moment anyone switched to Part Design.
 
 The **Cascadia PLM** workbench also carries two buttons, if your UI surfaces it:
 
@@ -203,9 +209,9 @@ python tests/test_preflight.py  --agent-src <agent/src>
 CASCADIA_API_KEY=csc_... CASCADIA_ITEM_ID=<uuid> python tests/test_roundtrip.py
 ```
 
-127 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
-FCStd archives, 17 over the preflight gates, 42 over the panel's URL, route, status and address-bar handling, 19 over the installer's path
-resolution and macro handling, and 20 over the workbench module loading, registering and startup
+137 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
+FCStd archives, 17 over the preflight gates, 47 over the panel's URL, route, status, address bar and toolbar, 19 over the installer's path
+resolution and macro handling, and 25 over the workbench module loading, registering, startup and icon
 resolution — negative cases included, since a check that cannot fail is not a
 check. The panel's Qt half needs a running FreeCAD and is exercised by hand;
 what is tested here is where it points, which is where a silent 404 comes from.

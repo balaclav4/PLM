@@ -45,6 +45,7 @@ ADDON_CONTENTS = (
     "pyproject.toml",
     "README.md",
     "cascadia_bridge",
+    "resources",
     "agent-tool-contract.json",
 )
 
