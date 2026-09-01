@@ -207,6 +207,31 @@ The macro above sidesteps this entirely. To confirm what is going on, move
   and the panel raises a dialog rather than only logging to the Report view,
   which is hidden by default too.
 
+### Getting Cascadia running
+
+The panel is a window onto a Cascadia instance and does not start one. If it
+shows "No Cascadia at this address", nothing is listening — the addon is fine.
+
+```bash
+python scripts/cascadia-up.py           # what is ready, what is not
+python scripts/cascadia-up.py --fix     # create .env, push schema, seed
+python scripts/cascadia-up.py --start   # --fix, then run the dev server
+```
+
+It finds the Cascadia checkout by walking up for the `package.json` that names
+it, rather than trusting the working directory — running these from the wrong
+directory is the most common way this goes wrong. Installing PostgreSQL needs
+root, so that is printed rather than run.
+
+Two gotchas it works around: `npm run db:push` is interactive and appears to
+hang, so the schema is pushed with `node scripts/drizzle.mjs push --force`
+(the form the project's own `db:drop:seed` uses); and `.env` must exist with
+`DATABASE_URL` before the API will start at all.
+
+Wait for **both** lines before re-opening the panel — `Local:
+http://localhost:3000/` and `Hono API server running on http://localhost:3001`.
+The client alone is not enough; the panel will load but Cascadia will not work.
+
 ### Navigating
 
 The panel carries browser chrome above the view: **back**, **forward**,
