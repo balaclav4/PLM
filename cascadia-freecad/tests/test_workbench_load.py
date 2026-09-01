@@ -111,8 +111,12 @@ def main() -> int:
 
     print("\nregistration")
     check("a workbench was registered", len(registry["workbenches"]) == 1, str(registry["workbenches"]))
-    workbench = registry["workbenches"][0]
-    check("it is the Cascadia workbench", getattr(workbench, "__name__", "") == "CascadiaWorkbench")
+    registered = registry["workbenches"][0]
+    # FreeCAD accepts a class or an instance; a known-good addon on the target
+    # machine registers an instance, so match that.
+    check("an instance was registered, not the class", not isinstance(registered, type))
+    workbench = type(registered)
+    check("it is the Cascadia workbench", workbench.__name__ == "CascadiaWorkbench")
     check(
         "the name matches package.xml's classname",
         "CascadiaWorkbench" in (ROOT / "package.xml").read_text(),
@@ -120,8 +124,7 @@ def main() -> int:
     check("MenuText is set", bool(getattr(workbench, "MenuText", "")))
 
     print("\nInitialize() wires the toolbar")
-    instance = workbench()
-    instance.Initialize()
+    registered.Initialize()
     check("both commands registered", set(registry["commands"]) == {"Cascadia_Panel", "Cascadia_Status"}, str(set(registry["commands"])))
     check("a toolbar was appended", bool(registry.get("toolbars")), str(registry.get("toolbars")))
     check("a menu was appended", bool(registry.get("menus")))
@@ -132,6 +135,24 @@ def main() -> int:
         check(f"{name} declares MenuText", bool(resources.get("MenuText")))
         check(f"{name} declares a Pixmap", bool(resources.get("Pixmap")))
         check(f"{name} is active without a document", command.IsActive() is True)
+
+    print("\nstartup behaviour")
+    check(
+        "the addon directory is put on sys.path",
+        str(ROOT) in sys.path,
+    )
+    check(
+        "auto-show is scheduled on a timer, not run inline",
+        "singleShot" in (ROOT / "InitGui.py").read_text(),
+    )
+    check(
+        "auto-show can be turned off by preference",
+        'GetBool("AutoShow"' in (ROOT / "InitGui.py").read_text(),
+    )
+    check(
+        "a build without QtWebEngine is not auto-opened",
+        "webengine_available" in (ROOT / "InitGui.py").read_text(),
+    )
 
     print("\nInit.py loads too")
     try:

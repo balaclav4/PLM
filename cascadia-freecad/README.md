@@ -43,20 +43,27 @@ rather than guessing and installing somewhere FreeCAD will never look.
 script FreeCAD themselves: `-c` is **`--console`**, which starts an interactive
 interpreter and will hang a script trying to read its output.
 
-Restart FreeCAD, then either:
+Restart FreeCAD. **The panel opens by itself** — Cascadia is simply there when
+FreeCAD is, docked beside the model, with no macro to run and no workbench to
+find.
 
-- **Macro → Macros… → CascadiaPLM → Execute** — works in every FreeCAD UI, and
-  prints the status report before opening the panel. Use this if your interface
-  has been replaced (see below).
-- **View → Workbench → Cascadia PLM** in the stock UI. There are two buttons:
+To reopen it after closing, or to reload the code during development:
+**Macro → Macros… → CascadiaPLM → Execute**. The macro reloads the package
+first, so edits to a symlinked checkout take effect without restarting FreeCAD.
 
-- **Cascadia PLM status** — reports whether this build can dock the panel and
-  where the panel points. Click this first; it needs no Python console.
-- **Cascadia PLM panel** — opens the dock. It stays put when you switch back to
-  Part Design.
+The **Cascadia PLM** workbench also carries two buttons, if your UI surfaces it:
+
+- **Cascadia PLM panel** — show or hide the dock.
+- **Cascadia PLM status** — whether this build can embed the panel, and where
+  the panel points.
 
 Point it at your instance by setting `CASCADIA_URL` before launching FreeCAD.
 The status button shows which URL is in effect and where that value came from.
+
+To stop it opening automatically, set `AutoShow` to false under
+`BaseApp/Preferences/Cascadia` (Tools → Edit parameters). A build without
+QtWebEngine is never auto-opened — launching your system browser at every
+FreeCAD start would be obnoxious.
 
 ### Why an addon rather than a macro
 
@@ -196,9 +203,9 @@ python tests/test_preflight.py  --agent-src <agent/src>
 CASCADIA_API_KEY=csc_... CASCADIA_ITEM_ID=<uuid> python tests/test_roundtrip.py
 ```
 
-122 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
+127 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
 FCStd archives, 17 over the preflight gates, 42 over the panel's URL, route, status and address-bar handling, 19 over the installer's path
-resolution and macro handling, and 15 over the workbench module loading and registering
+resolution and macro handling, and 20 over the workbench module loading, registering and startup
 resolution — negative cases included, since a check that cannot fail is not a
 check. The panel's Qt half needs a running FreeCAD and is exercised by hand;
 what is tested here is where it points, which is where a silent 404 comes from.

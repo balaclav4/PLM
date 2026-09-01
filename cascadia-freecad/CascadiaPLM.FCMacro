@@ -1,25 +1,30 @@
-# Open the Cascadia PLM panel, without needing the workbench.
+# Open the Cascadia PLM panel.
 #
-# A workbench is only reachable through whatever UI is running, and a replaced
-# interface -- FreeCAD-Ribbon, for one -- builds its own layout from a stored
-# structure, so a newly installed workbench may not surface as a tab. Macros are
-# reachable in every FreeCAD UI, so this is the path that always works.
-#
-# Installed into FreeCAD's Macro directory by `python install.py`.
+# Normally the panel is already open: the addon shows it at startup. This macro
+# is for reopening it after a close, and for development -- it reloads the
+# package first, so edits to a symlinked checkout take effect without
+# restarting FreeCAD.
+
+import importlib
+import sys
 
 import FreeCAD
 
 try:
+    # Python caches imported modules, so a plain import would silently reuse the
+    # code loaded at startup and edits on disk would appear to do nothing.
+    for name in [n for n in list(sys.modules) if n.startswith("cascadia_bridge")]:
+        importlib.reload(sys.modules[name])
     from cascadia_bridge import panel
 except ImportError:
-    # The addon puts cascadia_bridge on sys.path via Mod/. If that has not
-    # happened, say why rather than dying on an ImportError traceback.
     FreeCAD.Console.PrintError(
         "Cascadia PLM: the addon is not on sys.path.\n"
         "FreeCAD loads Mod/ directories at startup, so either the addon is not "
         "installed or FreeCAD has not been restarted since installing.\n"
         "Run:  python install.py --where\n"
     )
+except Exception as error:
+    FreeCAD.Console.PrintError(f"Cascadia PLM: reload failed ({error})\n")
 else:
     FreeCAD.Console.PrintMessage("Cascadia PLM status\n" + panel.status_text() + "\n")
     panel.toggle()

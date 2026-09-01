@@ -422,11 +422,28 @@ def _dock_area(value: int):
     }.get(value, QtCore.Qt.RightDockWidgetArea)
 
 
+# The live dock, cached so repeated toggles reuse one web view and one session
+# rather than rebuilding (and re-authenticating) each time.
+_dock = None
+
+
 def _existing_dock():
+    """The panel's dock, from the cache or by searching the main window."""
+    global _dock
+    if _dock is not None:
+        try:
+            _dock.objectName()  # cheap liveness probe: raises once Qt deletes it
+            return _dock
+        except RuntimeError:
+            _dock = None
+
     from PySide import QtWidgets
 
     mw = FreeCADGui.getMainWindow()
-    return mw.findChild(QtWidgets.QDockWidget, DOCK_OBJECT_NAME) if mw else None
+    if mw is None:
+        return None
+    _dock = mw.findChild(QtWidgets.QDockWidget, DOCK_OBJECT_NAME)
+    return _dock
 
 
 def show(url: str | None = None, as_tab: bool = False):
@@ -483,10 +500,13 @@ def show(url: str | None = None, as_tab: bool = False):
         mdi.setActiveSubWindow(window)
         return view
 
-    dock = QtWidgets.QDockWidget()
+    global _dock
+    # Parent to the main window, as FreeCAD addons conventionally do — an
+    # unparented dock is owned by nothing and can be collected underneath you.
+    dock = QtWidgets.QDockWidget("Cascadia PLM", mw)
     dock.setObjectName(DOCK_OBJECT_NAME)
-    dock.setWindowTitle("Cascadia PLM")
     dock.setWidget(view)
+    _dock = dock
     mw.addDockWidget(_dock_area(prefs.GetInt("DockArea", 2)), dock)
     dock.setFloating(prefs.GetBool("DockFloating", False))
     dock.resize(prefs.GetInt("DockWidth", 480), prefs.GetInt("DockHeight", 800))
