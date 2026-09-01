@@ -162,6 +162,22 @@ def main() -> int:
         "AutoShow is checked before the button is added",
     )
 
+    print("\nstartup announces itself")
+    messages = "".join(freecad.Console.messages)
+    check(
+        "InitGui logs that it loaded",
+        "InitGui loaded" in messages,
+        repr(messages[:120]),
+    )
+    check(
+        "the log names the startup delay",
+        str(int(namespace["STARTUP_DELAY_MS"])) in messages,
+    )
+    check(
+        "startup reports the build commit",
+        "build_info" in init_gui and "loaded from" in init_gui,
+    )
+
     print("\nshipped icon")
     icon = ROOT / "resources" / "cascadia.svg"
     check("an icon ships with the addon", icon.exists())

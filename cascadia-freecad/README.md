@@ -19,6 +19,18 @@ Two things cache, and both look identical from the outside:
   `cascadia_bridge` it loaded at launch. The macro reloads the package before
   use, which covers panel changes; startup changes still need a restart.
 
+On startup the addon writes two lines to the **Report view**
+(View → Panels → Report view):
+
+```
+Cascadia PLM: InitGui loaded, opening in 2500ms
+Cascadia PLM a3fab0a loaded from /home/you/PLM/cascadia-freecad
+```
+
+The first says FreeCAD executed `InitGui.py` at all; the second names the commit
+it loaded. If the first appears and the second does not, the startup timer never
+ran. If neither appears, FreeCAD never loaded the addon.
+
 To tell whether FreeCAD is running the code you think it is, compare two
 numbers. `python doctor.py` prints the commit of the checkout on disk and
 whether it is behind the remote; the **Cascadia PLM status** button prints the
@@ -227,9 +239,9 @@ python tests/test_preflight.py  --agent-src <agent/src>
 CASCADIA_API_KEY=csc_... CASCADIA_ITEM_ID=<uuid> python tests/test_roundtrip.py
 ```
 
-144 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
+147 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
 FCStd archives, 17 over the preflight gates, 54 over the panel's URL, route, status, address bar, toolbar and build reporting, 19 over the installer's path
-resolution and macro handling, and 25 over the workbench module loading, registering, startup and icon
+resolution and macro handling, and 28 over the workbench module loading, registering, startup, icon and logging
 resolution — negative cases included, since a check that cannot fail is not a
 check. The panel's Qt half needs a running FreeCAD and is exercised by hand;
 what is tested here is where it points, which is where a silent 404 comes from.

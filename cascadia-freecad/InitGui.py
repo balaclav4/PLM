@@ -141,6 +141,17 @@ def _on_startup():
         FreeCAD.Console.PrintWarning(f"Cascadia PLM: could not load the panel ({error})\n")
         return
 
+    # Announce the build unconditionally. One glance at the Report view then
+    # answers both "did the addon load?" and "is FreeCAD running the code I
+    # just pulled?" — without clicking anything or opening a console.
+    try:
+        build = panel.build_info()
+        FreeCAD.Console.PrintMessage(
+            f"Cascadia PLM {build['commit']} loaded from {build['path']}\n"
+        )
+    except Exception:
+        FreeCAD.Console.PrintMessage("Cascadia PLM loaded (build unknown)\n")
+
     # The button goes up whatever else happens — it is the way back in when the
     # panel is closed, and it is wanted even on builds that cannot embed.
     try:
@@ -175,4 +186,7 @@ def _schedule_startup():
         FreeCAD.Console.PrintWarning(f"Cascadia PLM: could not schedule startup ({error})\n")
 
 
+FreeCAD.Console.PrintMessage(
+    f"Cascadia PLM: InitGui loaded, opening in {STARTUP_DELAY_MS}ms\n"
+)
 _schedule_startup()
