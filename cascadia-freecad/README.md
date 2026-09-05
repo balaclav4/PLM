@@ -214,7 +214,7 @@ shows "No Cascadia at this address", nothing is listening — the addon is fine.
 
 ```bash
 python scripts/cascadia-up.py           # what is ready, what is not
-python scripts/cascadia-up.py --fix     # create .env, push schema, seed
+python scripts/cascadia-up.py --fix     # write .env, create the database, push schema, seed
 python scripts/cascadia-up.py --start   # --fix, then run the dev server
 ```
 
@@ -223,10 +223,28 @@ it, rather than trusting the working directory — running these from the wrong
 directory is the most common way this goes wrong. Installing PostgreSQL needs
 root, so that is printed rather than run.
 
-Two gotchas it works around: `npm run db:push` is interactive and appears to
-hang, so the schema is pushed with `node scripts/drizzle.mjs push --force`
-(the form the project's own `db:drop:seed` uses); and `.env` must exist with
-`DATABASE_URL` before the API will start at all.
+It checks six things in order: `node_modules`, `.env`, the PostgreSQL port, the
+database itself, the schema and seed, and the dev server. `--fix` does every
+part that does not need root.
+
+Gotchas it works around:
+
+- **A listening port is not a usable database.** A fresh PostgreSQL install
+  answers on 5432 with no `cascadia` database in it, which used to surface as a
+  drizzle stack trace two steps later. The database is opened before anything is
+  pushed to it, and the three ways it fails are reported as sentences: it does
+  not exist (`--fix` creates it over the same connection — no root needed), the
+  password was rejected (prints the `ALTER USER` to run), or nothing is
+  listening.
+- **`npm run db:push` is interactive** and appears to hang, so the schema goes
+  in with `node scripts/drizzle.mjs push --force` — the form the project's own
+  `db:drop:seed` uses.
+- **`.env` must exist with `DATABASE_URL`** before the API starts at all.
+  `--fix` copies `.env.example`, or writes a three-line file if there is no
+  example, or appends `DATABASE_URL` to an `.env` that lacks it.
+
+After seeding it prints the credentials to sign in with:
+`admin@cascadia.local` / `Cascadia`.
 
 Wait for **both** lines before re-opening the panel — `Local:
 http://localhost:3000/` and `Hono API server running on http://localhost:3001`.
@@ -258,18 +276,28 @@ logging in on every launch — worse than a second window.
 python tests/test_install.py                            # no FreeCAD needed
 python tests/test_workbench_load.py                     # no FreeCAD needed
 python tests/test_panel.py                              # no FreeCAD needed
+python tests/test_cascadia_up.py                        # no FreeCAD needed
 python tests/test_fcstd_scan.py --agent-src <agent/src>
 python tests/test_preflight.py  --agent-src <agent/src>
 
 CASCADIA_API_KEY=csc_... CASCADIA_ITEM_ID=<uuid> python tests/test_roundtrip.py
 ```
 
-147 checks: 22 over the file lifecycle, 14 over the scanner against synthesised
-FCStd archives, 17 over the preflight gates, 54 over the panel's URL, route, status, address bar, toolbar and build reporting, 19 over the installer's path
-resolution and macro handling, and 28 over the workbench module loading, registering, startup, icon and logging
-resolution — negative cases included, since a check that cannot fail is not a
-check. The panel's Qt half needs a running FreeCAD and is exercised by hand;
-what is tested here is where it points, which is where a silent 404 comes from.
+191 checks:
+
+| Suite                 | Checks | Over                                                            |
+| --------------------- | -----: | --------------------------------------------------------------- |
+| `test_roundtrip`      |     22 | the file lifecycle end to end                                   |
+| `test_fcstd_scan`     |     14 | the scanner, against synthesised FCStd archives                 |
+| `test_preflight`      |     17 | the preflight gates                                             |
+| `test_panel`          |     54 | the panel's URL, routes, status, address bar, toolbar and build |
+| `test_install`        |     19 | the installer's path resolution and macro handling              |
+| `test_workbench_load` |     28 | the workbench loading, registering, startup, icon and logging   |
+| `test_cascadia_up`    |     37 | checkout discovery, `DATABASE_URL` parsing, the embedded JS     |
+
+Negative cases included, since a check that cannot fail is not a check. The
+panel's Qt half needs a running FreeCAD and is exercised by hand; what is tested
+here is where it points, which is where a silent 404 comes from.
 
 ## Scope
 
