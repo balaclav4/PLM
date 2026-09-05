@@ -106,10 +106,34 @@ def main() -> int:
     check("an unroutable address is not reachable", panel.reachable("http://127.0.0.1:9", timeout=1) is False)
     page = panel._unreachable_html("http://example.invalid:3000")
     check("the page names the address tried", "example.invalid:3000" in page)
-    check("the page says how to run Cascadia", "npm run dev" in page)
+    check("the page says how to run Cascadia", "cascadia-up.py --start" in page)
     check("the page explains the panel does not start one", "does not start one" in page)
     check("the page mentions CASCADIA_URL", "CASCADIA_URL" in page)
     check("the page is themed for dark mode too", "prefers-color-scheme: dark" in page)
+    check("it names the credentials the seed creates", "admin@cascadia.local" in page)
+    check(
+        "it points at the panel's own Reload, not a macro to re-run",
+        "Reload" in page and "macro" not in page.lower(),
+    )
+    # db:push prompts and appears to hang; the page used to recommend it, which
+    # sent people into exactly the failure the startup script exists to avoid.
+    check("it does not recommend the interactive db:push", "db:push" not in page)
+
+    print("\nthe startup command it prints")
+    command = panel.startup_command()
+    check("it is a complete command, not a fragment", command.startswith("python "))
+    check("it names the startup script", "cascadia-up.py" in command)
+    check("it starts the server rather than only reporting", command.endswith("--start"))
+    check(
+        "the path is absolute, so the directory does not matter",
+        os.path.isabs(command.split()[1]),
+        command,
+    )
+    check(
+        "the path is where the script actually is",
+        _os_exists(command.split()[1]),
+        command.split()[1],
+    )
 
     print("\naddress bar input")
     base = "http://localhost:3000"

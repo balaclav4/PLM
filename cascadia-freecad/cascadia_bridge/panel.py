@@ -139,6 +139,18 @@ def reachable(url: str, timeout: float = 2.0) -> bool:
         return False
 
 
+def startup_command() -> str:
+    """The command that brings a local Cascadia up, with a real path in it.
+
+    The path is resolved from this file rather than written out, because the
+    addon is as often run from a checkout as from FreeCAD's Mod directory, and a
+    command that has to be adapted before it works is one more thing to get
+    wrong.
+    """
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return f"python {os.path.join(root, 'scripts', 'cascadia-up.py')} --start"
+
+
 def _unreachable_html(url: str) -> str:
     """Explain an unreachable Cascadia, rather than showing a browser error.
 
@@ -171,13 +183,16 @@ def _unreachable_html(url: str) -> str:
 <p>Nothing answered there. This panel is a window onto a Cascadia instance &mdash;
 it does not start one, so a Cascadia server has to be running and reachable from
 this machine.</p>
-<p>To run one locally, from your Cascadia checkout:</p>
-<pre>npm install
-npm run db:push
-npm run db:seed
-npm run dev</pre>
-<p>That needs PostgreSQL running and <code>DATABASE_URL</code> set in
-<code>.env</code>. Then re-run the macro.</p>
+<p>To run one locally:</p>
+<pre>{startup_command()}</pre>
+<p>That checks what is missing, fixes what it safely can &mdash; the
+<code>.env</code>, the database, the schema, the seed &mdash; and starts the dev
+server. It finds your checkout itself, so it does not matter which directory you
+run it from. Installing PostgreSQL needs root, so it prints that step rather
+than running it.</p>
+<p>Wait for both <code>Local: http://localhost:3000/</code> and <code>Hono API
+server running on http://localhost:3001</code>, then press <b>Reload</b> above.
+Sign in with <code>admin@cascadia.local</code> / <code>Cascadia</code>.</p>
 <p>If Cascadia is running elsewhere, set <code>CASCADIA_URL</code> before
 launching FreeCAD, or call
 <code>panel.set_base_url("http://host:3000")</code>.</p>

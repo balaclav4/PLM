@@ -283,14 +283,14 @@ python tests/test_preflight.py  --agent-src <agent/src>
 CASCADIA_API_KEY=csc_... CASCADIA_ITEM_ID=<uuid> python tests/test_roundtrip.py
 ```
 
-191 checks:
+199 checks:
 
 | Suite                 | Checks | Over                                                            |
 | --------------------- | -----: | --------------------------------------------------------------- |
 | `test_roundtrip`      |     22 | the file lifecycle end to end                                   |
 | `test_fcstd_scan`     |     14 | the scanner, against synthesised FCStd archives                 |
 | `test_preflight`      |     17 | the preflight gates                                             |
-| `test_panel`          |     54 | the panel's URL, routes, status, address bar, toolbar and build |
+| `test_panel`          |     62 | the panel's URL, routes, status, address bar, toolbar and build |
 | `test_install`        |     19 | the installer's path resolution and macro handling              |
 | `test_workbench_load` |     28 | the workbench loading, registering, startup, icon and logging   |
 | `test_cascadia_up`    |     37 | checkout discovery, `DATABASE_URL` parsing, the embedded JS     |
